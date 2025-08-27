@@ -92,7 +92,7 @@ void FockBuilder::setup(double prec) {
     this->potential().setup(prec);
     this->perturbation().setup(prec);
 
-    if (isZora()) {
+    if (isZora() || isZora2C()) { // Scalar ZORA or 2-component ZORA
         Timer t_zora;
         double c = getLightSpeed();
         mrcpp::print::header(3, "Building ZORA operators");
@@ -252,6 +252,11 @@ ComplexMatrix FockBuilder::operator()(OrbitalVector &bra, OrbitalVector &ket) {
     return T_mat + V_mat;
 }
 
+// @brief Build the Helmholtz argument for the Fock operator
+// @param prec: precision for the Helmholtz operator
+// @param Phi: orbitals
+// @param F_mat: Fock matrix
+// @param L_mat: Lambda matrix from the Helmholtz operator
 OrbitalVector FockBuilder::buildHelmholtzArgument(double prec, OrbitalVector Phi, ComplexMatrix F_mat, ComplexMatrix L_mat) {
     Timer t_tot;
     auto plevel = Printer::getPrintLevel();
@@ -262,6 +267,7 @@ OrbitalVector FockBuilder::buildHelmholtzArgument(double prec, OrbitalVector Phi
     mrcpp::print::time(2, "Rotating orbitals", t_rot);
 
     OrbitalVector out;
+    // TODO: The ZORA method should handle both scalar  and 2C implementations
     if (isZora() || isAZora()) {
         out = buildHelmholtzArgumentZORA(Phi, Psi, F_mat.real().diagonal(), prec);
     } else {

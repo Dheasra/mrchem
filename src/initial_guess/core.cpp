@@ -160,7 +160,8 @@ bool initial_guess::core::setup(OrbitalVector &Phi, double prec, const Nuclei &n
  * QZ: 1s2s2p3s3p4s3d4p5s4d5p (5s + 12p + 10d)
  *
  */
-void initial_guess::core::project_ao(OrbitalVector &Phi, double prec, const Nuclei &nucs, int zeta) {
+void initial_guess::core::project_ao(OrbitalVector &Phi, double prec, const Nuclei &nucs, int zeta, int nComponent) {
+    // Setting up format for output?
     Timer t_tot;
     auto w0 = Printer::getWidth() - 2;
     auto w1 = 5;
@@ -203,7 +204,8 @@ void initial_guess::core::project_ao(OrbitalVector &Phi, double prec, const Nucl
             for (int m = 0; m < M; m++) {
                 Timer t_i;
                 HydrogenFunction h_func(n, l, m, Z, R);
-                Phi.push_back(Orbital(SPIN::Paired));
+                // Phi.push_back(Orbital(SPIN::Paired));
+                Phi.push_back(Orbital(2, nComponent)); // Creating a paired (scalar) orbital (2 is the spin)
                 Phi.back().setRank(Phi.size() - 1);
                 if (mrcpp::mpi::my_orb(Phi.back())) {
                     mrcpp::cplxfunc::project(Phi.back(), h_func, NUMBER::Real, prec);
@@ -231,6 +233,8 @@ void initial_guess::core::rotate_orbitals(OrbitalVector &Psi, double prec, Compl
     mrcpp::print::time(1, "Rotating orbitals", t_tot);
 }
 
+
+//Computes the overlap matrix S^-1/2 for a set of orbitals
 ComplexMatrix initial_guess::core::diagonalize(OrbitalVector &Phi, MomentumOperator &p, RankZeroOperator &V) {
     Timer t1;
     ComplexMatrix S_m12 = orbital::calc_lowdin_matrix(Phi);

@@ -50,9 +50,12 @@ class ComplexFunction;
 
 // class Orbital;
 using Orbital = mrcpp::ComplexFunction;
+// using Orbital = mrcpp::CompFunction<3>;
 using OrbitalChunk = std::vector<std::tuple<int, Orbital>>;
 
 using OrbitalVector = mrcpp::MPI_FuncVector;
+// using OrbitalVector = std::vector<Orbital>;
+// using OrbitalVector = mrcpp::CompFunctionVector; // This is a vector of orbitals, not a distributed vector
 // class OrbitalVector;
 
 class Density;

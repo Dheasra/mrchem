@@ -30,13 +30,15 @@
 
 /** @class Orbital
  *
- * @brief General complex-valued function with spin
+ * @brief General complex-valued spinor (1,2 or 4 components)
  *
- * Inherits the general features of a complex function from mrcpp::ComplexFunction which
- * means separate MW function representations for the real and imaginary parts.
+ * Inherits the general features of a complex function from mrcpp::CompFunction which
+ * means separate MW function representations for each component, and
+ * the ability to apply operators, project, normalize, etc.
  * Note that there are several options for copying/assignment: the proper copy
  * constructor and assignment operator are *shallow* copies, which means that
- * they simply copy the *re and *im pointers (no transfer of ownership).
+ * they simply copy the pointers (no transfer of ownership).
+ * AS OF 20/08/25 NOT YET INCORPORATED:
  * Additionaly, there is a deepCopy() which returns a *full* copy of the orbital,
  * and a paramCopy() which returns an empty orbital with the same rank_id/spin/occ.
  *
@@ -48,7 +50,9 @@
 
 namespace mrchem {
 
-using Orbital = mrcpp::ComplexFunction;
-using OrbitalVector = mrcpp::MPI_FuncVector;
+// using Orbital = mrcpp::ComplexFunction;
+// using OrbitalVector = mrcpp::MPI_FuncVector;
+using Orbital = mrcpp::CompFunction<3>;
+using OrbitalVector = mrcpp::CompFunctionVector; // This is a vector of orbitals, not a distributed vector
 
 } // namespace mrchem
