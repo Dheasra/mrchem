@@ -39,17 +39,17 @@ public:
             : mrcpp::Plotter<3>(o)
             , molecule(&mol) {}
 
-    void linePlot(const std::array<int, 1> &npts, mrcpp::ComplexFunction &func, const std::string &fname) {
-        if (func.hasReal()) linePlot(npts, func.real(), fname + "_re");
-        if (func.hasImag()) linePlot(npts, func.imag(), fname + "_im");
+    void linePlot(const std::array<int, 1> &npts, mrcpp::CompFunction &func, const std::string &fname) {
+        if (func.isreal()) linePlot(npts, func.compD(), fname + "_re");
+        if (func.iscomplex()) linePlot(npts, func.compC(), fname + "_im");
     }
-    void surfPlot(const std::array<int, 2> &npts, mrcpp::ComplexFunction &func, const std::string &fname) {
-        if (func.hasReal()) surfPlot(npts, func.real(), fname + "_re");
-        if (func.hasImag()) surfPlot(npts, func.imag(), fname + "_im");
+    void surfPlot(const std::array<int, 2> &npts, mrcpp::CompFunction &func, const std::string &fname) {
+        if (func.isreal()) surfPlot(npts, func.compD(), fname + "_re");
+        if (func.iscomplex()) surfPlot(npts, func.compC(), fname + "_im");
     }
-    void cubePlot(const std::array<int, 3> &npts, mrcpp::ComplexFunction &func, const std::string &fname) {
-        if (func.hasReal()) cubePlot(npts, func.real(), fname + "_re");
-        if (func.hasImag()) cubePlot(npts, func.imag(), fname + "_im");
+    void cubePlot(const std::array<int, 3> &npts, mrcpp::CompFunction &func, const std::string &fname) {
+        if (func.isreal()) cubePlot(npts, func.compD(), fname + "_re");
+        if (func.iscomplex()) cubePlot(npts, func.compC(), fname + "_im");
     }
 
     using Plotter<3>::linePlot;

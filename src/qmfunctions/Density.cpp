@@ -40,7 +40,7 @@ namespace mrchem {
  * NO transfer of ownership.
  */
 Density &Density::operator=(const Density &dens) {
-    if (this != &dens) mrcpp::ComplexFunction::operator=(dens);
+    if (this != &dens) mrcpp::CompFunction::operator=(dens);
     return *this;
 }
 
@@ -58,23 +58,23 @@ void Density::saveDensity(const std::string &file) {
     metafile << file << ".meta";
 
     // this flushes tree sizes
-    mrcpp::FunctionData &func_data = mrcpp::ComplexFunction::getFunctionData();
+    mrcpp::FunctionData &func_data = mrcpp::CompFunction::data();
 
     std::fstream f;
     f.open(metafile.str(), std::ios::out | std::ios::binary);
     if (not f.is_open()) MSG_ERROR("Unable to open file");
-    f.write((char *)&func_data, sizeof(mrcpp::FunctionData));
+    f.write((char *)&func_data, sizeof(this->data());
     f.close();
 
     // writing real part
-    if (hasReal()) {
+    if (isreal()) {
         std::stringstream fname;
         fname << file << "_re";
         real().saveTree(fname.str());
     }
 
     // writing imaginary part
-    if (hasImag()) {
+    if (iscomplex()) {
         std::stringstream fname;
         fname << file << "_im";
         imag().saveTree(fname.str());
@@ -90,15 +90,15 @@ void Density::saveDensity(const std::string &file) {
  * and imaginary ("phi_0_im.tree") parts.
  */
 void Density::loadDensity(const std::string &file) {
-    if (hasReal()) MSG_ERROR("Density not empty");
-    if (hasImag()) MSG_ERROR("Density not empty");
+    if (isreal()) MSG_ERROR("Density not empty");
+    if (iscomplex()) MSG_ERROR("Density not empty");
 
     // reading meta data
     std::stringstream fmeta;
     fmeta << file << ".meta";
 
     // this flushes tree sizes
-    mrcpp::FunctionData &func_data = mrcpp::ComplexFunction::getFunctionData();
+    mrcpp::FunctionData &func_data = mrcpp::CompFunction::getFunctionData();
 
     std::fstream f;
     f.open(fmeta.str(), std::ios::in | std::ios::binary);

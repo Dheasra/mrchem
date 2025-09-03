@@ -27,10 +27,11 @@
 
 #include "RankZeroOperator.h"
 #include "TensorOperator.h"
+#include "qmfunctions/Orbital.h"
 
 namespace mrchem {
 
-using Orbital = mrcpp::ComplexFunction;
+// using Orbital = mrcpp::ComplexFunction;
 
 /** @class RankOneOperator
  *

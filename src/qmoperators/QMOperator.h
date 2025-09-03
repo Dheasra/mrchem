@@ -31,6 +31,7 @@
 
 #include "mrchem.h"
 #include "tensor/tensor_fwd.h"
+#include "qmfunctions/Orbital.h"
 
 /** @class QMOperator
  *
@@ -53,7 +54,7 @@
  */
 namespace mrchem {
 
-using Orbital = mrcpp::ComplexFunction;
+// using Orbital = mrcpp::ComplexFunction;
 
 class QMOperator {
 public:

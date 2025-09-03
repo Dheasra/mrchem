@@ -41,7 +41,7 @@
 #include "initial_guess/mw.h"
 #include "initial_guess/sad.h"
 
-#include "utils/MolPlotter.h"
+// #include "utils/MolPlotter.h"
 #include "utils/math_utils.h"
 #include "utils/print_utils.h"
 
@@ -352,7 +352,7 @@ bool driver::scf::guess_orbitals(const json &json_guess, Molecule &mol) {
     auto cube_p = json_guess["file_CUBE_p"];
     auto cube_a = json_guess["file_CUBE_a"];
     auto cube_b = json_guess["file_CUBE_b"];
-    auto nComponent = json_guess["ncomponent"];
+    auto nComponent = json_guess["components"];
 
     int mult = mol.getMultiplicity();
     if (restricted && mult != 1) {
@@ -654,114 +654,114 @@ void driver::scf::calc_properties(const json &json_prop, Molecule &mol, const js
     if (plevel == 1) mrcpp::print::footer(1, t_tot, 2);
 }
 
-/** @brief Plot ground-state quantities
- *
- * This function expects the "cube_plot" subsection of the
- * "scf_calculation" input section.
- */
-void driver::scf::plot_quantities(const json &json_plot, Molecule &mol) {
-    Timer t_tot, t_lap;
+// /** @brief Plot ground-state quantities
+//  *
+//  * This function expects the "cube_plot" subsection of the
+//  * "scf_calculation" input section.
+//  */
+// void driver::scf::plot_quantities(const json &json_plot, Molecule &mol) {
+//     Timer t_tot, t_lap;
 
-    auto path = json_plot["plotter"]["path"].get<std::string>();
-    auto type = json_plot["plotter"]["type"].get<std::string>();
-    auto npts = json_plot["plotter"]["points"];
-    auto O = json_plot["plotter"]["O"];
-    auto A = json_plot["plotter"]["A"];
-    auto B = json_plot["plotter"]["B"];
-    auto C = json_plot["plotter"]["C"];
-    auto dens_plot = json_plot["density"];
-    auto orb_idx = json_plot["orbitals"];
+//     auto path = json_plot["plotter"]["path"].get<std::string>();
+//     auto type = json_plot["plotter"]["type"].get<std::string>();
+//     auto npts = json_plot["plotter"]["points"];
+//     auto O = json_plot["plotter"]["O"];
+//     auto A = json_plot["plotter"]["A"];
+//     auto B = json_plot["plotter"]["B"];
+//     auto C = json_plot["plotter"]["C"];
+//     auto dens_plot = json_plot["density"];
+//     auto orb_idx = json_plot["orbitals"];
 
-    auto line = (type == "line") ? true : false;
-    auto surf = (type == "surf") ? true : false;
-    auto cube = (type == "cube") ? true : false;
+//     auto line = (type == "line") ? true : false;
+//     auto surf = (type == "surf") ? true : false;
+//     auto cube = (type == "cube") ? true : false;
 
-    print_utils::headline(1, "Plotting Ground State Quantities");
-    if (line) mrcpp::print::header(1, "LinePlot");
-    if (surf) mrcpp::print::header(1, "SurfPlot");
-    if (cube) mrcpp::print::header(1, "CubePlot");
+//     print_utils::headline(1, "Plotting Ground State Quantities");
+//     if (line) mrcpp::print::header(1, "LinePlot");
+//     if (surf) mrcpp::print::header(1, "SurfPlot");
+//     if (cube) mrcpp::print::header(1, "CubePlot");
 
-    auto &Phi = mol.getOrbitals();
-    MolPlotter plt(mol, O);
-    plt.setRange(A, B, C);
+//     auto &Phi = mol.getOrbitals();
+//     MolPlotter plt(mol, O);
+//     plt.setRange(A, B, C);
 
-    if (dens_plot) {
-        Density rho(false);
+//     if (dens_plot) {
+//         Density rho(false);
 
-        t_lap.start();
-        std::string fname = path + "/rho_t";
-        density::compute(-1.0, rho, Phi, DensityType::Total);
-        if (line) plt.linePlot(npts, rho, fname);
-        if (surf) plt.surfPlot(npts, rho, fname);
-        if (cube) plt.cubePlot(npts, rho, fname);
-        rho.free(NUMBER::Total);
-        mrcpp::print::time(1, fname, t_lap);
+//         t_lap.start();
+//         std::string fname = path + "/rho_t";
+//         density::compute(-1.0, rho, Phi, DensityType::Total);
+//         if (line) plt.linePlot(npts, rho, fname);
+//         if (surf) plt.surfPlot(npts, rho, fname);
+//         if (cube) plt.cubePlot(npts, rho, fname);
+//         rho.free(NUMBER::Total);
+//         mrcpp::print::time(1, fname, t_lap);
 
-        if (orbital::size_singly(Phi) > 0) {
-            t_lap.start();
-            fname = path + "/rho_s";
-            density::compute(-1.0, rho, Phi, DensityType::Spin);
-            if (line) plt.linePlot(npts, rho, fname);
-            if (surf) plt.surfPlot(npts, rho, fname);
-            if (cube) plt.cubePlot(npts, rho, fname);
-            mrcpp::print::time(1, fname, t_lap);
-            rho.free(NUMBER::Total);
+//         if (orbital::size_singly(Phi) > 0) {
+//             t_lap.start();
+//             fname = path + "/rho_s";
+//             density::compute(-1.0, rho, Phi, DensityType::Spin);
+//             if (line) plt.linePlot(npts, rho, fname);
+//             if (surf) plt.surfPlot(npts, rho, fname);
+//             if (cube) plt.cubePlot(npts, rho, fname);
+//             mrcpp::print::time(1, fname, t_lap);
+//             rho.free(NUMBER::Total);
 
-            t_lap.start();
-            fname = path + "/rho_a";
-            density::compute(-1.0, rho, Phi, DensityType::Alpha);
-            if (line) plt.linePlot(npts, rho, fname);
-            if (surf) plt.surfPlot(npts, rho, fname);
-            if (cube) plt.cubePlot(npts, rho, fname);
-            mrcpp::print::time(1, fname, t_lap);
-            rho.free(NUMBER::Total);
+//             t_lap.start();
+//             fname = path + "/rho_a";
+//             density::compute(-1.0, rho, Phi, DensityType::Alpha);
+//             if (line) plt.linePlot(npts, rho, fname);
+//             if (surf) plt.surfPlot(npts, rho, fname);
+//             if (cube) plt.cubePlot(npts, rho, fname);
+//             mrcpp::print::time(1, fname, t_lap);
+//             rho.free(NUMBER::Total);
 
-            t_lap.start();
-            fname = path + "/rho_b";
-            density::compute(-1.0, rho, Phi, DensityType::Beta);
-            if (line) plt.linePlot(npts, rho, fname);
-            if (surf) plt.surfPlot(npts, rho, fname);
-            if (cube) plt.cubePlot(npts, rho, fname);
-            rho.free(NUMBER::Total);
-            mrcpp::print::time(1, fname, t_lap);
-        }
-    }
+//             t_lap.start();
+//             fname = path + "/rho_b";
+//             density::compute(-1.0, rho, Phi, DensityType::Beta);
+//             if (line) plt.linePlot(npts, rho, fname);
+//             if (surf) plt.surfPlot(npts, rho, fname);
+//             if (cube) plt.cubePlot(npts, rho, fname);
+//             rho.free(NUMBER::Total);
+//             mrcpp::print::time(1, fname, t_lap);
+//         }
+//     }
 
-    // Plotting NO orbitals
-    if (orb_idx.size() > 0) {
-        if (orb_idx[0] < 0) {
-            // Plotting ALL orbitals
-            for (auto i = 0; i < Phi.size(); i++) {
-                if (not mrcpp::mpi::my_orb(Phi[i])) continue;
-                t_lap.start();
-                std::stringstream name;
-                name << path << "/phi_" << Phi[i].printSpin() << "_scf_idx_" << i;
-                if (line) plt.linePlot(npts, Phi[i], name.str());
-                if (surf) plt.surfPlot(npts, Phi[i], name.str());
-                if (cube) plt.cubePlot(npts, Phi[i], name.str());
-                mrcpp::print::time(1, name.str(), t_lap);
-            }
-        } else {
-            // Plotting some orbitals
-            for (auto &i : orb_idx) {
-                if (not mrcpp::mpi::my_orb(Phi[i])) continue;
-                t_lap.start();
-                std::stringstream name;
-                auto sp = 'u';
-                if (Phi[i].spin() == SPIN::Paired) sp = 'p';
-                if (Phi[i].spin() == SPIN::Alpha) sp = 'a';
-                if (Phi[i].spin() == SPIN::Beta) sp = 'b';
-                name << path << "/phi_" << sp << "_scf_idx_" << i;
-                if (line) plt.linePlot(npts, Phi[i], name.str());
-                if (surf) plt.surfPlot(npts, Phi[i], name.str());
-                if (cube) plt.cubePlot(npts, Phi[i], name.str());
-                mrcpp::print::time(1, name.str(), t_lap);
-            }
-        }
-    }
+//     // Plotting NO orbitals
+//     if (orb_idx.size() > 0) {
+//         if (orb_idx[0] < 0) {
+//             // Plotting ALL orbitals
+//             for (auto i = 0; i < Phi.size(); i++) {
+//                 if (not mrcpp::mpi::my_orb(Phi[i])) continue;
+//                 t_lap.start();
+//                 std::stringstream name;
+//                 name << path << "/phi_" << Phi[i].printSpin() << "_scf_idx_" << i;
+//                 if (line) plt.linePlot(npts, Phi[i], name.str());
+//                 if (surf) plt.surfPlot(npts, Phi[i], name.str());
+//                 if (cube) plt.cubePlot(npts, Phi[i], name.str());
+//                 mrcpp::print::time(1, name.str(), t_lap);
+//             }
+//         } else {
+//             // Plotting some orbitals
+//             for (auto &i : orb_idx) {
+//                 if (not mrcpp::mpi::my_orb(Phi[i])) continue;
+//                 t_lap.start();
+//                 std::stringstream name;
+//                 auto sp = 'u';
+//                 if (Phi[i].spin() == SPIN::Paired) sp = 'p';
+//                 if (Phi[i].spin() == SPIN::Alpha) sp = 'a';
+//                 if (Phi[i].spin() == SPIN::Beta) sp = 'b';
+//                 name << path << "/phi_" << sp << "_scf_idx_" << i;
+//                 if (line) plt.linePlot(npts, Phi[i], name.str());
+//                 if (surf) plt.surfPlot(npts, Phi[i], name.str());
+//                 if (cube) plt.cubePlot(npts, Phi[i], name.str());
+//                 mrcpp::print::time(1, name.str(), t_lap);
+//             }
+//         }
+//     }
 
-    mrcpp::print::footer(1, t_tot, 2);
-}
+//     mrcpp::print::footer(1, t_tot, 2);
+// }
 
 /** @brief Run linear response SCF calculation
  *

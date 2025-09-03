@@ -25,7 +25,9 @@
 
 #pragma once
 
-#include "MRCPP/MWFunctions"
+// #include "MRCPP/MWFunctions"
+// #include "MRCPP/CompFunction"
+// #include <mrcpp>
 
 #include "Orbital.h"
 
@@ -33,8 +35,8 @@
  *
  * @brief General complex-valued function to handle densities (incl trans. densities)
  *
- * Inherits the general features of a complex function from mrcpp::ComplexFunction which
- * means separate MW function representations for the real and imaginary parts.
+ * Inherits the general features of a complex function from mrcpp::CompFunction which
+ * means single tree for either real or complex valued-tree.
  * Note that there are several options for copying/assignment: the proper copy
  * constructor and assignment operator are *shallow* copies, which means that
  * they simply copy the *re and *im pointers (no transfer of ownership).
@@ -48,12 +50,12 @@
 
 namespace mrchem {
 
-class Density final : public mrcpp::ComplexFunction {
+class Density final : public mrcpp::CompFunction<3> {
 public:
     explicit Density(bool share)
-            : mrcpp::ComplexFunction(0, -1, -1, share) {}
+            : mrcpp::CompFunction<3>(0, share) {}
     Density(const Density &dens)
-            : mrcpp::ComplexFunction(dens) {}
+            : mrcpp::CompFunction<3>(dens) {}
     Density &operator=(const Density &dens);
 
     void saveDensity(const std::string &file);
