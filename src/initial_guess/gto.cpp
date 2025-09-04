@@ -176,7 +176,7 @@ void initial_guess::gto::project_mo(OrbitalVector &Phi, double prec, const std::
  * Projects the N first Gaussian-type AOs into corresponding MW orbitals.
  *
  */
-void initial_guess::gto::project_ao(OrbitalVector &Phi, double prec, const Nuclei &nucs, double screen) {
+void initial_guess::gto::project_ao(OrbitalVector &Phi, double prec, const Nuclei &nucs, int nComponents, double screen) {
     Timer timer;
     auto w0 = Printer::getWidth() - 2;
     auto w1 = 5;
@@ -202,7 +202,7 @@ void initial_guess::gto::project_ao(OrbitalVector &Phi, double prec, const Nucle
         std::string sad_path;
         for (auto n : {sad_basis_source_dir(), sad_basis_install_dir()}) {
             auto trimmed = print_utils::rtrim_copy(n);
-            if (mrcpp::details::directory_exists(trimmed)) {
+            if (mrcpp::details::directory_exists(trimmed)) { 
                 sad_path = trimmed;
                 break;
             }
@@ -219,12 +219,17 @@ void initial_guess::gto::project_ao(OrbitalVector &Phi, double prec, const Nucle
         int n = 0;
         for (int i = 0; i < gto_exp.size(); i++) {
             Timer t_i;
-            Phi.push_back(Orbital(SPIN::Paired));
+            // Phi.push_back(Orbital(SPIN::Paired));
+            Phi.push_back(Orbital("paired", nComponents));
             Phi.back().setRank(Phi.size() - 1);
             GaussExp<3> ao_i = gto_exp.getAO(i);
             ao_i.calcScreening(screen);
+
             if (mrcpp::mpi::my_func(Phi.back())) {
                 mrcpp::project(Phi.back(), ao_i, prec);
+            // if (mrcpp::mpi::my_orb(Phi.back())) {
+            //     mrcpp::CompFunction::project(Phi.back(), ao_i, NUMBER::Real, prec);
+
                 if (std::abs(Phi.back().norm() - 1.0) > 0.01) MSG_WARN("AO not normalized!");
             }
 

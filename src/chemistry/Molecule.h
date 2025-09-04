@@ -136,9 +136,9 @@ protected:
     ComplexMatrix fock_matrix{};
 
     std::shared_ptr<Cavity> cavity{nullptr};
-    std::shared_ptr<OrbitalVector> orbitals_0{std::make_shared<OrbitalVector>()};
-    std::shared_ptr<OrbitalVector> orbitals_x{nullptr};
-    std::shared_ptr<OrbitalVector> orbitals_y{nullptr};
+    std::shared_ptr<OrbitalVector> orbitals_0{std::make_shared<OrbitalVector>()}; // Unperturbed orbitals
+    std::shared_ptr<OrbitalVector> orbitals_x{nullptr}; // Perturbed orbitals in x-direction?
+    std::shared_ptr<OrbitalVector> orbitals_y{nullptr}; // Perturbed orbitals in y-direction?
 
     // Properties
     SCFEnergy energy{};

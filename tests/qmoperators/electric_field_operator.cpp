@@ -23,7 +23,7 @@
  * <https://mrchem.readthedocs.io/>
  */
 
-#include "catch.hpp"
+#include "catch2/catch_all.hpp"
 
 #include "mrchem.h"
 
@@ -124,13 +124,13 @@ TEST_CASE("ElectricFieldOperator", "[electric_field_operator]") {
         if (mrcpp::mpi::my_func(Phi[0])) {
             REQUIRE(X_00.real() == Approx(ref(0, 0)));
         } else {
-            REQUIRE(X_00.real() == Approx(0.0).margin(thrs));
+            REQUIRE(X_00.real() == Catch::Approx(0.0).margin(thrs));
         }
     }
     SECTION("operator matrix elements") {
         ComplexMatrix X = EF(Phi, Phi);
         for (int i = 0; i < X.rows(); i++) {
-            for (int j = 0; j < X.cols(); j++) { REQUIRE(std::abs(X(i, j).real()) == Approx(ref(i, j)).margin(thrs)); }
+            for (int j = 0; j < X.cols(); j++) { REQUIRE(std::abs(X(i, j).real()) == Catch::Approx(ref(i, j)).margin(thrs)); }
         }
     }
     EF.clear();
@@ -170,7 +170,7 @@ TEST_CASE("ElectricFieldEnergy", "[electric_field_energy]") {
         double E_ext = EF.trace(Phi).real();
         double E_nex = -EF.trace(nucs).real();
         REQUIRE(E_ext < thrs);
-        REQUIRE(E_nex == Approx(2.0));
+        REQUIRE(E_nex == Catch::Approx(2.0));
     }
     EF.clear();
 }

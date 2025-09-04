@@ -32,6 +32,7 @@
 #include "mrchem.h"
 #include "qmfunctions/Orbital.h"
 #include "tensor/tensor_fwd.h"
+#include "qmfunctions/Orbital.h"
 
 /** @class QMOperator
  *

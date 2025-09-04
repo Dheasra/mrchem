@@ -292,7 +292,7 @@ json GroundStateSolver::optimize(Molecule &mol, FockBuilder &F) {
         HelmholtzVector H(helm_prec, F_mat.real().diagonal());
         ComplexMatrix L_mat = H.getLambdaMatrix();
 
-        // Apply Helmholtz operator
+        // Apply Helmholtz operator (Power iteration)
         OrbitalVector Psi = F.buildHelmholtzArgument(orb_prec, Phi_n, F_mat, L_mat);
         OrbitalVector Phi_np1 = H(Psi);
         Psi.clear();

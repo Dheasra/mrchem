@@ -131,7 +131,7 @@ ComplexMatrix qmoperator::calc_kinetic_matrix_component(int d, MomentumOperator 
         sNodes += orbital::get_size_nodes(dKet);
         T = mrcpp::calc_overlap_matrix(dKet);
     } else {
-        OrbitalVector dBra = p[d](bra);
+        OrbitalVector dBra = p[d](bra); // I hope this works on CompFunctions
         OrbitalVector dKet = p[d](ket);
         nNodes += orbital::get_n_nodes(dBra);
         nNodes += orbital::get_n_nodes(dKet);

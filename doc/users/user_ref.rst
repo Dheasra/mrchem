@@ -347,9 +347,18 @@ User input reference
     **Predicates**
 
       - ``value.lower() in ['none', 'zora', 'nzora', 'azora']``
-
-   :environment: Set method for treatment of environment. ``none`` for vacuum calculation. ``PCM`` for Polarizable Continuum Model, which will activate the ``PCM`` input section for further parametrization options. The ``PB`` and ``LPB`` variants add the Poisson-Boltzmann and Linearized Poisson-Boltzmann solvers, respectively.
-
+  
+   :components: Number of components in the wavefunction. 1 for scalar wavefunction, 2 for two-component spinors (only available with ZORA relativity), 4 for four-component spinors (not yet implemented). 
+  
+    **Type** ``int``
+  
+    **Default** ``1``
+  
+    **Predicates**
+      - ``value in [1, 2, 4]``
+  
+   :environment: Set method for treatment of environment. ``none`` for vacuum calculation. ``PCM`` for Polarizable Continuum Model, which will activate the ``PCM`` input section for further parametrization options. The ``PB`` and ``LPB`` variants add the Poisson-Boltzmann and Linearized Poisson-Boltzmann solvers, respectively. 
+  
     **Type** ``str``
 
     **Default** ``none``
@@ -1089,6 +1098,7 @@ User input reference
     **Type** ``float``
 
     **Default** ``0.005``
+<<<<<<< HEAD
 
  :Constants: Physical and mathematical constants used by MRChem
 
@@ -1183,6 +1193,9 @@ User input reference
 
     **Default** ``18897261246.2577``
 
+=======
+  
+>>>>>>> ZORA
  :Elements: list of elements with data
 
   :red:`Sections`
@@ -12273,3 +12286,100 @@ User input reference
         **Type** ``float``
 
         **Default** ``0.00011186082063``
+<<<<<<< HEAD
+=======
+      
+ :Constants: Physical and mathematical constants used by MRChem
+
+  :red:`Keywords`
+   :hartree2simagnetizability: | Conversion factor for magnetizability from atomic units to SI units  (unit: J T^-2). Affected code: Printed value of the magnetizability property.
+  
+    **Type** ``float``
+  
+    **Default** ``78.9451185``
+  
+   :light_speed: | Speed of light in atomic units  (unit: au). Affected code: Relativistic Hamiltonians (ZORA, etc.)
+  
+    **Type** ``float``
+  
+    **Default** ``137.035999084``
+  
+   :angstrom2bohrs: | Conversion factor for Cartesian coordinates from Angstrom to Bohr  (unit: Å^-1). Affected code: Parsing of input coordinates, printed coordinates
+  
+    **Type** ``float``
+  
+    **Default** ``1.8897261246257702``
+  
+   :hartree2kjmol: | Conversion factor from Hartree to kJ/mol  (unit: kJ mol^-1). Affected code: Printed value of energies.
+  
+    **Type** ``float``
+  
+    **Default** ``2625.4996394798254``
+  
+   :hartree2kcalmol: | Conversion factor from Hartree to kcal/mol  (unit: kcal mol^-1). Affected code: Printed value of energies.
+  
+    **Type** ``float``
+  
+    **Default** ``627.5094740630558``
+  
+   :hartree2ev: | Conversion factor from Hartree to eV  (unit: ev). Affected code: Printed value of energies.
+  
+    **Type** ``float``
+  
+    **Default** ``27.211386245988``
+  
+   :hartree2wavenumbers: | Conversion factor from Hartree to wavenumbers (unit: cm^-1). Affected code: Printed value of frequencies.
+  
+    **Type** ``float``
+  
+    **Default** ``219474.6313632``
+  
+   :fine_structure_constant: | Fine-structure constant in atomic units (unit: au). Affected code: Certain magnetic interaction operators.
+  
+    **Type** ``float``
+  
+    **Default** ``0.0072973525693``
+  
+   :electron_g_factor: | Electron g factor in atomic units (unit: au). Affected code: Certain magnetic interaction operators.
+  
+    **Type** ``float``
+  
+    **Default** ``-2.00231930436256``
+  
+   :dipmom_au2debye: | Conversion factor for dipoles from atomic units to Debye (unit: ?). Affected code: Printed value of dipole moments.
+  
+    **Type** ``float``
+  
+    **Default** ``2.5417464739297717``
+  
+   :boltzmann_constant: | Boltzmann constant in (unit: J K^-1). Affected code: Value of the Debye-Huckel screening parameter in the Poisson-Boltzmann equation.
+  
+    **Type** ``float``
+  
+    **Default** ``1.380649e-23``
+  
+   :elementary_charge: | Elementary charge in (unit: C). Affected code: Value of the Debye-Huckel screening parameter in the Poisson-Boltzmann equation.
+  
+    **Type** ``float``
+  
+    **Default** ``1.602176634e-19``
+  
+   :e0: | Permittivity of free space (unit: F m^-1). Affected code: Value of the Debye-Huckel screening parameter in the Poisson-Boltzmann equation.
+  
+    **Type** ``float``
+  
+    **Default** ``8.8541878128e-12``
+  
+   :N_a: | Avogadro constant (unit: mol^-1). Affected code: Value of the Debye-Huckel screening parameter in the Poisson-Boltzmann equation.
+  
+    **Type** ``float``
+  
+    **Default** ``6.02214076e+23``
+  
+   :meter2bohr: | conversion factor from meter to Bohr radius (unit: m^-1). Affected code: Value of the Debye-Huckel screening parameter in the Poisson-Boltzmann equation.
+  
+    **Type** ``float``
+  
+    **Default** ``18897261246.2577``
+  
+>>>>>>> ZORA

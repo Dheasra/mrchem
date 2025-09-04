@@ -309,6 +309,15 @@ sections:
           over keywords in the ``ZORA`` section).
           ``azora`` uses atomic ZORA potentials, which are precomputed and read from the directory 
           specified in the ``azora_potential_path`` keyword.
+      - name: components
+        type: int
+        default: 1
+        predicates:
+          - value in [1, 2, 4]
+        docstring: |
+          Number of components in the wavefunction. 1 for scalar wavefunction,
+          2 for two-component spinors (only available with ZORA relativity),
+          4 for four-component spinors (not yet implemented).
       - name: environment
         type: str
         default: none
@@ -1133,87 +1142,6 @@ sections:
         docstring: |
           The geometry optimization stopps when the absolute value of all force components is smaller than this keyword.
           A value between 1e-3 and 1e-4 is tight enough for most applications.
-  - name: Constants
-    docstring: Physical and mathematical constants used by MRChem
-    keywords:
-      - name: hartree2simagnetizability
-        default: 78.9451185
-        type: float
-        docstring: '| Conversion factor for magnetizability from atomic units to SI
-          units  (unit: J T^-2). Affected code: Printed value of the magnetizability
-          property.'
-      - name: light_speed
-        default: 137.035999084
-        type: float
-        docstring: '| Speed of light in atomic units  (unit: au). Affected code: Relativistic
-          Hamiltonians (ZORA, etc.)'
-      - name: angstrom2bohrs
-        default: 1.8897261246257702
-        type: float
-        docstring: '| Conversion factor for Cartesian coordinates from Angstrom to
-          Bohr  (unit: Å^-1). Affected code: Parsing of input coordinates, printed
-          coordinates'
-      - name: hartree2kjmol
-        default: 2625.4996394798254
-        type: float
-        docstring: '| Conversion factor from Hartree to kJ/mol  (unit: kJ mol^-1).
-          Affected code: Printed value of energies.'
-      - name: hartree2kcalmol
-        default: 627.5094740630558
-        type: float
-        docstring: '| Conversion factor from Hartree to kcal/mol  (unit: kcal mol^-1).
-          Affected code: Printed value of energies.'
-      - name: hartree2ev
-        default: 27.211386245988
-        type: float
-        docstring: '| Conversion factor from Hartree to eV  (unit: ev). Affected code:
-          Printed value of energies.'
-      - name: hartree2wavenumbers
-        default: 219474.6313632
-        type: float
-        docstring: '| Conversion factor from Hartree to wavenumbers (unit: cm^-1).
-          Affected code: Printed value of frequencies.'
-      - name: fine_structure_constant
-        default: 0.0072973525693
-        type: float
-        docstring: '| Fine-structure constant in atomic units (unit: au). Affected
-          code: Certain magnetic interaction operators.'
-      - name: electron_g_factor
-        default: -2.00231930436256
-        type: float
-        docstring: '| Electron g factor in atomic units (unit: au). Affected code:
-          Certain magnetic interaction operators.'
-      - name: dipmom_au2debye
-        default: 2.5417464739297717
-        type: float
-        docstring: '| Conversion factor for dipoles from atomic units to Debye (unit:
-          ?). Affected code: Printed value of dipole moments.'
-      - name: boltzmann_constant
-        default: 1.380649e-23
-        type: float
-        docstring: '| Boltzmann constant in (unit: J K^-1). Affected code: Value of
-          the Debye-Huckel screening parameter in the Poisson-Boltzmann equation.'
-      - name: elementary_charge
-        default: 1.602176634e-19
-        type: float
-        docstring: '| Elementary charge in (unit: C). Affected code: Value of the
-          Debye-Huckel screening parameter in the Poisson-Boltzmann equation.'
-      - name: e0
-        default: 8.8541878128e-12
-        type: float
-        docstring: '| Permittivity of free space (unit: F m^-1). Affected code: Value
-          of the Debye-Huckel screening parameter in the Poisson-Boltzmann equation.'
-      - name: N_a
-        default: 6.02214076e+23
-        type: float
-        docstring: '| Avogadro constant (unit: mol^-1). Affected code: Value of the
-          Debye-Huckel screening parameter in the Poisson-Boltzmann equation.'
-      - name: meter2bohr
-        default: 18897261246.2577
-        type: float
-        docstring: '| conversion factor from meter to Bohr radius (unit: m^-1). Affected
-          code: Value of the Debye-Huckel screening parameter in the Poisson-Boltzmann
-          equation.'
   - name: Elements
     sections:
       - name: h
@@ -8721,3 +8649,84 @@ sections:
             docstring: r_rms of element
             type: float
     docstring: list of elements with data
+  - name: Constants
+    docstring: Physical and mathematical constants used by MRChem
+    keywords:
+      - name: hartree2simagnetizability
+        default: 78.9451185
+        type: float
+        docstring: '| Conversion factor for magnetizability from atomic units to SI
+          units  (unit: J T^-2). Affected code: Printed value of the magnetizability
+          property.'
+      - name: light_speed
+        default: 137.035999084
+        type: float
+        docstring: '| Speed of light in atomic units  (unit: au). Affected code: Relativistic
+          Hamiltonians (ZORA, etc.)'
+      - name: angstrom2bohrs
+        default: 1.8897261246257702
+        type: float
+        docstring: '| Conversion factor for Cartesian coordinates from Angstrom to
+          Bohr  (unit: Å^-1). Affected code: Parsing of input coordinates, printed
+          coordinates'
+      - name: hartree2kjmol
+        default: 2625.4996394798254
+        type: float
+        docstring: '| Conversion factor from Hartree to kJ/mol  (unit: kJ mol^-1).
+          Affected code: Printed value of energies.'
+      - name: hartree2kcalmol
+        default: 627.5094740630558
+        type: float
+        docstring: '| Conversion factor from Hartree to kcal/mol  (unit: kcal mol^-1).
+          Affected code: Printed value of energies.'
+      - name: hartree2ev
+        default: 27.211386245988
+        type: float
+        docstring: '| Conversion factor from Hartree to eV  (unit: ev). Affected code:
+          Printed value of energies.'
+      - name: hartree2wavenumbers
+        default: 219474.6313632
+        type: float
+        docstring: '| Conversion factor from Hartree to wavenumbers (unit: cm^-1).
+          Affected code: Printed value of frequencies.'
+      - name: fine_structure_constant
+        default: 0.0072973525693
+        type: float
+        docstring: '| Fine-structure constant in atomic units (unit: au). Affected
+          code: Certain magnetic interaction operators.'
+      - name: electron_g_factor
+        default: -2.00231930436256
+        type: float
+        docstring: '| Electron g factor in atomic units (unit: au). Affected code:
+          Certain magnetic interaction operators.'
+      - name: dipmom_au2debye
+        default: 2.5417464739297717
+        type: float
+        docstring: '| Conversion factor for dipoles from atomic units to Debye (unit:
+          ?). Affected code: Printed value of dipole moments.'
+      - name: boltzmann_constant
+        default: 1.380649e-23
+        type: float
+        docstring: '| Boltzmann constant in (unit: J K^-1). Affected code: Value of
+          the Debye-Huckel screening parameter in the Poisson-Boltzmann equation.'
+      - name: elementary_charge
+        default: 1.602176634e-19
+        type: float
+        docstring: '| Elementary charge in (unit: C). Affected code: Value of the
+          Debye-Huckel screening parameter in the Poisson-Boltzmann equation.'
+      - name: e0
+        default: 8.8541878128e-12
+        type: float
+        docstring: '| Permittivity of free space (unit: F m^-1). Affected code: Value
+          of the Debye-Huckel screening parameter in the Poisson-Boltzmann equation.'
+      - name: N_a
+        default: 6.02214076e+23
+        type: float
+        docstring: '| Avogadro constant (unit: mol^-1). Affected code: Value of the
+          Debye-Huckel screening parameter in the Poisson-Boltzmann equation.'
+      - name: meter2bohr
+        default: 18897261246.2577
+        type: float
+        docstring: '| conversion factor from meter to Bohr radius (unit: m^-1). Affected
+          code: Value of the Debye-Huckel screening parameter in the Poisson-Boltzmann
+          equation.'

@@ -23,7 +23,7 @@
  * <https://mrchem.readthedocs.io/>
  */
 
-#include "catch.hpp"
+#include "catch2/catch_all.hpp"
 
 #include "MRCPP/Parallel"
 #include "mrchem.h"
@@ -100,26 +100,26 @@ TEST_CASE("QMFunction", "[qmfunction]") {
         SECTION("copy constructor") {
             mrcpp::CompFunction func_2(func_1);
             REQUIRE(func_2.isShared() == func_1.isShared());
-            REQUIRE(func_2.norm() == Approx(func_1.norm()));
-            REQUIRE(func_2.integrate().real() == Approx(func_1.integrate().real()));
-            REQUIRE(func_2.integrate().imag() == Approx(func_1.integrate().imag()));
+            REQUIRE(func_2.norm() == Catch::Approx(func_1.norm()));
+            REQUIRE(func_2.integrate().real() == Catch::Approx(func_1.integrate().real()));
+            REQUIRE(func_2.integrate().imag() == Catch::Approx(func_1.integrate().imag()));
         }
 
         SECTION("default constructor plus assignment") {
             mrcpp::CompFunction func_2;
             func_2 = func_1;
             REQUIRE(func_2.isShared() == func_1.isShared());
-            REQUIRE(func_2.norm() == Approx(func_1.norm()));
-            REQUIRE(func_2.integrate().real() == Approx(func_1.integrate().real()));
-            REQUIRE(func_2.integrate().imag() == Approx(func_1.integrate().imag()));
+            REQUIRE(func_2.norm() == Catch::Approx(func_1.norm()));
+            REQUIRE(func_2.integrate().real() == Catch::Approx(func_1.integrate().real()));
+            REQUIRE(func_2.integrate().imag() == Catch::Approx(func_1.integrate().imag()));
         }
 
         SECTION("assigment constructor") {
             mrcpp::CompFunction func_2 = func_1;
             REQUIRE(func_2.isShared() == func_1.isShared());
-            REQUIRE(func_2.norm() == Approx(func_1.norm()));
-            REQUIRE(func_2.integrate().real() == Approx(func_1.integrate().real()));
-            REQUIRE(func_2.integrate().imag() == Approx(func_1.integrate().imag()));
+            REQUIRE(func_2.norm() == Catch::Approx(func_1.norm()));
+            REQUIRE(func_2.integrate().real() == Catch::Approx(func_1.integrate().real()));
+            REQUIRE(func_2.integrate().imag() == Catch::Approx(func_1.integrate().imag()));
         }
 
         SECTION("deep copy to non-shared") {
@@ -135,9 +135,9 @@ TEST_CASE("QMFunction", "[qmfunction]") {
             mrcpp::CompFunction func_2(0, true);
             mrcpp::deep_copy(func_2, func_1);
             REQUIRE(func_2.isShared() == func_1.isShared());
-            REQUIRE(func_2.norm() == Approx(func_1.norm()));
-            REQUIRE(func_2.integrate().real() == Approx(func_1.integrate().real()));
-            REQUIRE(func_2.integrate().imag() == Approx(func_1.integrate().imag()));
+            REQUIRE(func_2.norm() == Catch::Approx(func_1.norm()));
+            REQUIRE(func_2.integrate().real() == Catch::Approx(func_1.integrate().real()));
+            REQUIRE(func_2.integrate().imag() == Catch::Approx(func_1.integrate().imag()));
         }
     }
 #endif

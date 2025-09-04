@@ -40,7 +40,7 @@ namespace mrchem {
  * NO transfer of ownership.
  */
 Density &Density::operator=(const Density &dens) {
-    if (this != &dens) mrcpp::CompFunction<3>::operator=(dens);
+    if (this != &dens) mrcpp::sCompFunction<3>::operator=(dens);
     return *this;
 }
 
@@ -59,7 +59,7 @@ void Density::saveDensity(const std::string &file) {
 
     // this flushes tree sizes
     mrcpp::CompFunctionData<3> &func_data = mrcpp::CompFunction<3>::func_ptr->data;
-    flushFuncData();
+    // flushFuncData();
 
     std::fstream f;
     f.open(metafile.str(), std::ios::out | std::ios::binary);
@@ -91,8 +91,8 @@ void Density::saveDensity(const std::string &file) {
  * and imaginary ("phi_0_im.tree") parts.
  */
 void Density::loadDensity(const std::string &file) {
-    if (hasReal()) MSG_ERROR("Density not empty");
-    if (hasImag()) MSG_ERROR("Density not empty");
+    if (isreal()) MSG_ERROR("Density not empty");
+    if (iscomplex()) MSG_ERROR("Density not empty");
 
     // reading meta data
     std::stringstream fmeta;
@@ -100,7 +100,7 @@ void Density::loadDensity(const std::string &file) {
 
     // this flushes tree sizes
     mrcpp::CompFunctionData<3> &func_data = mrcpp::CompFunction<3>::func_ptr->data;
-    flushFuncData();
+    // flushFuncData();
 
     std::fstream f;
     f.open(fmeta.str(), std::ios::in | std::ios::binary);

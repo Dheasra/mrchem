@@ -23,7 +23,7 @@
  * <https://mrchem.readthedocs.io/>
  */
 
-#include "catch.hpp"
+#include "catch2/catch_all.hpp"
 
 #include "MRCPP/MWOperators"
 
@@ -147,7 +147,7 @@ TEST_CASE("ExchangeHessian", "[exchange_hessian]") {
         ComplexMatrix v = V(Phi, Phi);
         for (int i = 0; i < Phi.size(); i++) {
             for (int j = 0; j <= i; j++) {
-                if (std::abs(v(i, j).real()) > thrs) REQUIRE(v(i, j).real() == Approx(E(i, j)).epsilon(thrs));
+                if (std::abs(v(i, j).real()) > thrs) REQUIRE(v(i, j).real() == Catch::Approx(E(i, j)).epsilon(thrs));
                 REQUIRE(v(i, j).imag() < thrs);
             }
         }

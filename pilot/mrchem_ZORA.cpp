@@ -23,29 +23,37 @@
  * <https://mrchem.readthedocs.io/>
  */
 
-#pragma once
+/** The MRChem sandbox */
 
-#include "qmfunctions/qmfunction_fwd.h"
+#include <MRCPP/Printer>
+#include <MRCPP/Timer>
+#include "MRCPP/Parallel"
 
-/** @file sad.h
- *
- * @brief Module for generating initial guess as superposition of atomic densities
- *
- * The initial_guess::sad namespace provides functionality to setup an initial
- * guess from hydrogen functions and a superposition of atomic densities.
- */
+#include "mrchem.h"
+#include "mrenv.h"
+#include "GroundStateSolver.h"
 
-namespace mrchem {
-class Nuclei;
+// Initializing global variables
+mrcpp::MultiResolutionAnalysis<3> *mrchem::MRA;
 
-namespace initial_guess {
-namespace sad {
+using json = nlohmann::json;
+using Timer = mrcpp::Timer;
+using namespace mrchem;
 
-bool setup(OrbitalVector &Phi, double prec, double screen, const Nuclei &nucs, int zeta=0, int component = 0);
-// bool setup(OrbitalVector &Phi, double prec, double screen, const Nuclei &nucs); //Redundant, use the one with zeta
+int main(int argc, char **argv) {
+    mrcpp::mpi::initialize();
+    const auto json_inp = mrenv::fetch_json(argc, argv);
+    mrenv::initialize(json_inp);
 
-// bool setup(OrbitalVector &Phi, int component, double prec, double screen, const Nuclei &nucs, int zeta = 3); // For relativistic calculations, more than one component.
+    Timer timer;
 
-} // namespace sad
-} // namespace initial_guess
-} // namespace mrchem
+    // Do your stuff here
+    // println(0, json_inp.dump(2));
+    GroundStateSolver gs_solver;
+
+    timer.stop();
+    double wt = timer.elapsed();
+    mrenv::finalize(wt);
+    // mrcpp::mpi::finalize();
+    return EXIT_SUCCESS;
+}

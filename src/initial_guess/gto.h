@@ -61,6 +61,7 @@ void project_mo(OrbitalVector &Phi,
 void project_ao(OrbitalVector &Phi,
                 double prec,
                 const Nuclei &nucs,
+                int nComponents = 0, // Choice of component of a CompFunction (generalised spinor), 0 always present, whether scalar, 2 component or 4.
                 double screen = -1.0);
 Density project_density(double prec,
                         const Nucleus &nuc,

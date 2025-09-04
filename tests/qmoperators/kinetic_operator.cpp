@@ -23,7 +23,7 @@
  * <https://mrchem.readthedocs.io/>
  */
 
-#include "catch.hpp"
+#include "catch2/catch_all.hpp"
 
 #include "MRCPP/MWOperators"
 
@@ -106,7 +106,7 @@ TEST_CASE("KineticOperator", "[kinetic_operator]") {
     SECTION("expectation matrix ") {
         ComplexMatrix t = T(Phi, Phi);
         for (int i = 0; i < Phi.size(); i++) {
-            REQUIRE(t(i, i).real() == Approx(E_K(i)));
+            REQUIRE(t(i, i).real() == Catch::Approx(E_K(i)));
             REQUIRE(t(i, i).imag() < thrs);
         }
     }

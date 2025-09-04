@@ -23,7 +23,7 @@
  * <https://mrchem.readthedocs.io/>
  */
 
-#include "catch.hpp"
+#include "catch2/catch_all.hpp"
 
 #include "MRCPP/MWOperators"
 
@@ -94,9 +94,15 @@ TEST_CASE("[XCOperatorLDA]", "[xc_operator_lda]") {
     V.setup(prec);
     SECTION("apply") {
         Orbital Vphi_0 = V(Phi[0]);
+<<<<<<< HEAD
         ComplexDouble V_00 = mrcpp::dot(Phi[0], Vphi_0);
         if (mrcpp::mpi::my_func(Phi[0])) {
             REQUIRE(V_00.real() == Approx(E_P(0, 0)).epsilon(thrs));
+=======
+        ComplexDouble V_00 = orbital::dot(Phi[0], Vphi_0);
+        if (mrcpp::mpi::my_orb(Phi[0])) {
+            REQUIRE(V_00.real() == Catch::Approx(E_P(0, 0)).epsilon(thrs));
+>>>>>>> ZORA
             REQUIRE(V_00.imag() < thrs);
         } else {
             REQUIRE(V_00.real() < thrs);
@@ -106,9 +112,15 @@ TEST_CASE("[XCOperatorLDA]", "[xc_operator_lda]") {
     SECTION("vector apply") {
         OrbitalVector VPhi = V(Phi);
         for (int i = 0; i < Phi.size(); i++) {
+<<<<<<< HEAD
             ComplexDouble V_ii = mrcpp::dot(Phi[i], VPhi[i]);
             if (mrcpp::mpi::my_func(Phi[i])) {
                 REQUIRE(V_ii.real() == Approx(E_P(i, i)).epsilon(thrs));
+=======
+            ComplexDouble V_ii = orbital::dot(Phi[i], VPhi[i]);
+            if (mrcpp::mpi::my_orb(Phi[i])) {
+                REQUIRE(V_ii.real() == Catch::Approx(E_P(i, i)).epsilon(thrs));
+>>>>>>> ZORA
                 REQUIRE(V_ii.imag() < thrs);
             } else {
                 REQUIRE(V_ii.real() < thrs);
@@ -118,8 +130,13 @@ TEST_CASE("[XCOperatorLDA]", "[xc_operator_lda]") {
     }
     SECTION("expectation value") {
         ComplexDouble V_00 = V(Phi[0], Phi[0]);
+<<<<<<< HEAD
         if (mrcpp::mpi::my_func(Phi[0])) {
             REQUIRE(V_00.real() == Approx(E_P(0, 0)).epsilon(thrs));
+=======
+        if (mrcpp::mpi::my_orb(Phi[0])) {
+            REQUIRE(V_00.real() == Catch::Approx(E_P(0, 0)).epsilon(thrs));
+>>>>>>> ZORA
             REQUIRE(V_00.imag() < thrs);
         } else {
             REQUIRE(V_00.real() < thrs);
@@ -130,7 +147,7 @@ TEST_CASE("[XCOperatorLDA]", "[xc_operator_lda]") {
         ComplexMatrix v = V(Phi, Phi);
         for (int i = 0; i < Phi.size(); i++) {
             for (int j = 0; j <= i; j++) {
-                if (std::abs(v(i, j).real()) > thrs) REQUIRE(v(i, j).real() == Approx(E_P(i, j)).epsilon(thrs));
+                if (std::abs(v(i, j).real()) > thrs) REQUIRE(v(i, j).real() == Catch::Approx(E_P(i, j)).epsilon(thrs));
                 REQUIRE(v(i, j).imag() < thrs);
             }
         }

@@ -23,7 +23,7 @@
  * <https://mrchem.readthedocs.io/>
  */
 
-#include "catch.hpp"
+#include "catch2/catch_all.hpp"
 
 #include "MRCPP/MWOperators"
 
@@ -125,7 +125,7 @@ TEST_CASE("PointNucleusHFYGB", "[nuclear_operator]") {
     SECTION("expectation matrix ") {
         ComplexMatrix v = V(Phi, Phi);
         for (int i = 0; i < Phi.size(); i++) {
-            REQUIRE(v(i, i).real() == Approx(E_P(i)).epsilon(prec));
+            REQUIRE(v(i, i).real() == Catch::Approx(E_P(i)).epsilon(prec));
             REQUIRE(v(i, i).imag() < thrs);
         }
     }
@@ -217,7 +217,7 @@ TEST_CASE("PointNucleusParabola", "[nuclear_operator]") {
     SECTION("expectation matrix ") {
         ComplexMatrix v = V(Phi, Phi);
         for (int i = 0; i < Phi.size(); i++) {
-            REQUIRE(v(i, i).real() == Approx(E_P(i)).epsilon(prec));
+            REQUIRE(v(i, i).real() == Catch::Approx(E_P(i)).epsilon(prec));
             REQUIRE(v(i, i).imag() < thrs);
         }
     }
@@ -309,7 +309,7 @@ TEST_CASE("PointNucleusMinimum", "[nuclear_operator]") {
     SECTION("expectation matrix ") {
         ComplexMatrix v = V(Phi, Phi);
         for (int i = 0; i < Phi.size(); i++) {
-            REQUIRE(v(i, i).real() == Approx(E_P(i)).epsilon(prec));
+            REQUIRE(v(i, i).real() == Catch::Approx(E_P(i)).epsilon(prec));
             REQUIRE(v(i, i).imag() < thrs);
         }
     }

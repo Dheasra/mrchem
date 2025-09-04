@@ -23,7 +23,7 @@
  * <https://mrchem.readthedocs.io/>
  */
 
-#include "catch.hpp"
+#include "catch2/catch_all.hpp"
 
 #include "mrchem.h"
 #include "qmfunctions/Orbital.h"
@@ -108,7 +108,7 @@ TEST_CASE("Orbital", "[orbital]") {
         REQUIRE(phi.norm() > 0.8);
 
         orbital::normalize(phi);
-        REQUIRE(phi.norm() == Approx(1.0));
+        REQUIRE(phi.norm() == Catch::Approx(1.0));
     }
 
     SECTION("orthogonalize") {

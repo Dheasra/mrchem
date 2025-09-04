@@ -23,7 +23,7 @@
  * <https://mrchem.readthedocs.io/>
  */
 
-#include "catch.hpp"
+#include "catch2/catch_all.hpp"
 
 #include "mrchem.h"
 #include "qmfunctions/Orbital.h"
@@ -139,8 +139,8 @@ TEST_CASE("OrbitalVector", "[orbital_vector]") {
             REQUIRE(get_electron_number(Psi, SPIN::Beta) == get_electron_number(Phi, SPIN::Beta));
 
             DoubleVector norms = get_norms(Psi);
-            REQUIRE(norms[0] == Approx(1.0));
-            REQUIRE(norms[1] == Approx(1.0));
+            REQUIRE(norms[0] == Catch::Approx(1.0));
+            REQUIRE(norms[1] == Catch::Approx(1.0));
         }
 
         SECTION("default constructor plus assignment") {
@@ -151,8 +151,8 @@ TEST_CASE("OrbitalVector", "[orbital_vector]") {
             REQUIRE(get_electron_number(Psi, SPIN::Beta) == get_electron_number(Phi, SPIN::Beta));
 
             DoubleVector norms = get_norms(Psi);
-            REQUIRE(norms[0] == Approx(1.0));
-            REQUIRE(norms[1] == Approx(1.0));
+            REQUIRE(norms[0] == Catch::Approx(1.0));
+            REQUIRE(norms[1] == Catch::Approx(1.0));
         }
 
         SECTION("default constructor plus deep copy") {
@@ -163,8 +163,8 @@ TEST_CASE("OrbitalVector", "[orbital_vector]") {
             REQUIRE(get_electron_number(Psi, SPIN::Beta) == get_electron_number(Phi, SPIN::Beta));
 
             DoubleVector norms = get_norms(Psi);
-            REQUIRE(norms[0] == Approx(1.0));
-            REQUIRE(norms[1] == Approx(1.0));
+            REQUIRE(norms[0] == Catch::Approx(1.0));
+            REQUIRE(norms[1] == Catch::Approx(1.0));
         }
 
         SECTION("assigment constructor") {
@@ -174,8 +174,8 @@ TEST_CASE("OrbitalVector", "[orbital_vector]") {
             REQUIRE(get_electron_number(Psi, SPIN::Beta) == get_electron_number(Phi, SPIN::Beta));
 
             DoubleVector norms = get_norms(Psi);
-            REQUIRE(norms[0] == Approx(1.0));
-            REQUIRE(norms[1] == Approx(1.0));
+            REQUIRE(norms[0] == Catch::Approx(1.0));
+            REQUIRE(norms[1] == Catch::Approx(1.0));
         }
 
         SECTION("parameter copy") {
@@ -243,7 +243,7 @@ TEST_CASE("OrbitalVector", "[orbital_vector]") {
             ComplexMatrix S = calc_overlap_matrix(Phi);
             for (int i = 0; i < S.rows(); i++) {
                 for (int j = 0; j < S.cols(); j++) {
-                    if (i == j) REQUIRE(std::abs(S(i, j)) == Approx(1.0));
+                    if (i == j) REQUIRE(std::abs(S(i, j)) == Catch::Approx(1.0));
                     if (i != j) REQUIRE(std::abs(S(i, j)) < thrs);
                 }
             }
@@ -254,7 +254,7 @@ TEST_CASE("OrbitalVector", "[orbital_vector]") {
             diagonalize(-1.0, Phi, S);
             for (int i = 0; i < S.rows(); i++) {
                 for (int j = 0; j < S.cols(); j++) {
-                    if (i == j) REQUIRE(std::abs(S(i, j)) == Approx(1.0));
+                    if (i == j) REQUIRE(std::abs(S(i, j)) == Catch::Approx(1.0));
                     if (i != j) REQUIRE(std::abs(S(i, j)) < thrs);
                 }
             }
@@ -267,7 +267,7 @@ TEST_CASE("OrbitalVector", "[orbital_vector]") {
             ComplexMatrix S = calc_overlap_matrix(Phi);
             for (int i = 0; i < S.rows(); i++) {
                 for (int j = 0; j < S.cols(); j++) {
-                    if (i == j) REQUIRE(std::abs(S(i, j)) == Approx(1.0));
+                    if (i == j) REQUIRE(std::abs(S(i, j)) == Catch::Approx(1.0));
                     if (i != j) REQUIRE(std::abs(S(i, j)) < thrs);
                 }
             }
@@ -316,7 +316,7 @@ TEST_CASE("OrbitalVector", "[orbital_vector]") {
             ComplexMatrix S = orbital::calc_overlap_matrix(Psi);
             for (int i = 0; i < S.rows(); i++) {
                 for (int j = 0; j < S.cols(); j++) {
-                    if (i == j) REQUIRE(std::abs(S(i, j)) == Approx(1.0));
+                    if (i == j) REQUIRE(std::abs(S(i, j)) == Catch::Approx(1.0));
                     if (i != j) REQUIRE(std::abs(S(i, j)) < thrs);
                 }
             }
@@ -331,7 +331,7 @@ TEST_CASE("OrbitalVector", "[orbital_vector]") {
             ComplexMatrix S = orbital::calc_overlap_matrix(Psi);
             for (int i = 0; i < S.rows(); i++) {
                 for (int j = 0; j < S.cols(); j++) {
-                    if (i == j) REQUIRE(std::abs(S(i, j)) == Approx(1.0));
+                    if (i == j) REQUIRE(std::abs(S(i, j)) == Catch::Approx(1.0));
                     if (i != j) REQUIRE(std::abs(S(i, j)) < thrs);
                 }
             }

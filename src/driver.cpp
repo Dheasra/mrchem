@@ -41,7 +41,7 @@
 #include "initial_guess/mw.h"
 #include "initial_guess/sad.h"
 
-#include "utils/MolPlotter.h"
+// #include "utils/MolPlotter.h"
 #include "utils/math_utils.h"
 #include "utils/print_utils.h"
 
@@ -354,6 +354,7 @@ bool driver::scf::guess_orbitals(const json &json_guess, Molecule &mol) {
     auto cube_p = json_guess["file_CUBE_p"];
     auto cube_a = json_guess["file_CUBE_a"];
     auto cube_b = json_guess["file_CUBE_b"];
+    auto nComponent = json_guess["components"];
 
     int mult = mol.getMultiplicity();
     if (restricted && mult != 1) {
@@ -378,9 +379,12 @@ bool driver::scf::guess_orbitals(const json &json_guess, Molecule &mol) {
     // Fill orbital vector
     auto &nucs = mol.getNuclei();
     auto &Phi = mol.getOrbitals();
-    for (auto p = 0; p < Np; p++) Phi.push_back(Orbital(SPIN::Paired));
-    for (auto a = 0; a < Na; a++) Phi.push_back(Orbital(SPIN::Alpha));
-    for (auto b = 0; b < Nb; b++) Phi.push_back(Orbital(SPIN::Beta));
+    // for (auto p = 0; p < Np; p++) Phi.push_back(Orbital(SPIN::Paired));
+    // for (auto a = 0; a < Na; a++) Phi.push_back(Orbital(SPIN::Alpha));
+    // for (auto b = 0; b < Nb; b++) Phi.push_back(Orbital(SPIN::Beta));
+    for (auto p = 0; p < Np; p++) Phi.push_back(Orbital("Paired", nComponent)); // Creating a paired (scalar) orbital (2 is the spin)
+    for (auto a = 0; a < Na; a++) Phi.push_back(Orbital("Alpha", nComponent));
+    for (auto b = 0; b < Nb; b++) Phi.push_back(Orbital("Beta", nComponent));
     Phi.distribute();
 
     auto success = true;
@@ -391,9 +395,9 @@ bool driver::scf::guess_orbitals(const json &json_guess, Molecule &mol) {
     } else if (type == "core") {
         success = initial_guess::core::setup(Phi, prec, nucs, zeta);
     } else if (type == "sad") {
-        success = initial_guess::sad::setup(Phi, prec, screen, nucs, zeta);
+        success = initial_guess::sad::setup(Phi, prec, screen, nucs, zeta, nComponent);
     } else if (type == "sad_gto") {
-        success = initial_guess::sad::setup(Phi, prec, screen, nucs);
+        success = initial_guess::sad::setup(Phi, prec, screen, nucs, -1, nComponent);
     } else if (type == "gto") {
         success = initial_guess::gto::setup(Phi, prec, screen, gto_bas, gto_p, gto_a, gto_b);
     } else if (type == "cube") {

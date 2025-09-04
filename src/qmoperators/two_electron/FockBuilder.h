@@ -83,6 +83,7 @@ public:
 
     bool isAZora() const { return zora_is_azora; }
     bool isZora() const { return (zora_has_nuc || zora_has_coul || zora_has_xc); }
+    bool isZora2C() const { return zora_has_2c; }
     void setZoraType(bool has_nuc, bool has_coul, bool has_xc, bool is_azora);
     void setAZORADirectory(const std::string &dir) { azora_dir = dir; }
     void setNucs(const Nuclei &nucs) { this->nucs = nucs; }
@@ -97,6 +98,7 @@ private:
     bool zora_has_coul{false};
     bool zora_has_xc{false};
     bool zora_is_azora{false};
+    bool zora_has_2c{false}; // ZORA with 2-component kinetic energy operator
     std::string azora_dir = "";
     std::string azora_dir_src = "";
     std::string azora_dir_install = "";
@@ -118,7 +120,7 @@ private:
     std::shared_ptr<XCOperator> xc{nullptr};
     std::shared_ptr<ReactionOperator> Ro{nullptr};       // Reaction field operator
     std::shared_ptr<ElectricFieldOperator> ext{nullptr}; // Total external potential
-    std::shared_ptr<ZoraOperator> chi{nullptr};
+    std::shared_ptr<ZoraOperator> chi{nullptr}; //chi = (1-V/c^2)^-1
     std::shared_ptr<ZoraOperator> chi_inv{nullptr};
 
     std::shared_ptr<QMPotential> collectZoraBasePotential();
