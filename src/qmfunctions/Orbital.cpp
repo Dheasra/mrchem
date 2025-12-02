@@ -46,13 +46,13 @@ Orbital::Orbital()
  *
  * Initializes with NULL tree pointers.
  */
-Orbital::Orbital(SPIN::type spin)
-        : mrcpp::CompFunction<3>(spin) {
+Orbital::Orbital(SPIN::type spin, int n_comp)
+        : mrcpp::CompFunction<3>(spin, n_comp) {
     if (this->spin() < 0) INVALID_ARG_ABORT;
     // d1 is used to store occupancy
     if (this->spin() == SPIN::Paired) this->func_ptr->data.d1[0] = 2;
     if (this->spin() == SPIN::Alpha) this->func_ptr->data.d1[0] = 1;
-    if (this->spin() == SPIN::Beta) this->func_ptr->data.d1[0] = 1;
+    if (this->spin() == SPIN::Beta) this->func_ptr->data.d1[1] = 1;
 }
 
 /** @brief Constructor for scalar Orbitals
@@ -69,7 +69,7 @@ Orbital::Orbital(int spin, double occ, int rank)
         // d1 is defined as occupancy
         if (this->spin() == SPIN::Paired) this->func_ptr->data.d1[0] = 2;
         if (this->spin() == SPIN::Alpha) this->func_ptr->data.d1[0] = 1;
-        if (this->spin() == SPIN::Beta) this->func_ptr->data.d1[0] = 1;
+        if (this->spin() == SPIN::Beta) this->func_ptr->data.d1[1] = 1;
     }
     this->func_ptr->rank = rank;
 }

@@ -40,7 +40,7 @@ namespace mrchem {
  * NO transfer of ownership.
  */
 Density &Density::operator=(const Density &dens) {
-    if (this != &dens) mrcpp::sCompFunction<3>::operator=(dens);
+    if (this != &dens) mrcpp::CompFunction<3>::operator=(dens);
     return *this;
 }
 

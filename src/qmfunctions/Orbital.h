@@ -57,7 +57,7 @@ namespace mrchem {
 class Orbital : public mrcpp::CompFunction<3> {
 public:
     Orbital();
-    Orbital(SPIN::type spin);
+    Orbital(SPIN::type spin, int n_comp = 1);
     Orbital(Orbital &orb);
     Orbital(const mrcpp::CompFunction<3> &orb);
     Orbital(int spin, double occ, int rank = -1);

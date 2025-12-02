@@ -379,12 +379,12 @@ bool driver::scf::guess_orbitals(const json &json_guess, Molecule &mol) {
     // Fill orbital vector
     auto &nucs = mol.getNuclei();
     auto &Phi = mol.getOrbitals();
-    // for (auto p = 0; p < Np; p++) Phi.push_back(Orbital(SPIN::Paired));
-    // for (auto a = 0; a < Na; a++) Phi.push_back(Orbital(SPIN::Alpha));
-    // for (auto b = 0; b < Nb; b++) Phi.push_back(Orbital(SPIN::Beta));
-    for (auto p = 0; p < Np; p++) Phi.push_back(Orbital("Paired", nComponent)); // Creating a paired (scalar) orbital (2 is the spin)
-    for (auto a = 0; a < Na; a++) Phi.push_back(Orbital("Alpha", nComponent));
-    for (auto b = 0; b < Nb; b++) Phi.push_back(Orbital("Beta", nComponent));
+    for (auto p = 0; p < Np; p++) Phi.push_back(Orbital(SPIN::Paired));
+    for (auto a = 0; a < Na; a++) Phi.push_back(Orbital(SPIN::Alpha));
+    for (auto b = 0; b < Nb; b++) Phi.push_back(Orbital(SPIN::Beta));
+    // for (auto p = 0; p < Np; p++) Phi.push_back(Orbital("Paired", nComponent)); // Creating a paired (scalar) orbital (2 is the spin)
+    // for (auto a = 0; a < Na; a++) Phi.push_back(Orbital("Alpha", nComponent));
+    // for (auto b = 0; b < Nb; b++) Phi.push_back(Orbital("Beta", nComponent));
     Phi.distribute();
 
     auto success = true;
