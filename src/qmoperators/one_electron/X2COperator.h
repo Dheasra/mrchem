@@ -34,25 +34,25 @@ namespace mrchem {
 class QMPotential;
 
 /**
- * @class ZoraOperator
- * @brief Implements chi = kappa - 1 relativistic dampening function. This has to be done in order to
- * avoid numerical instabilities in the ZORA operator. Whenever this operator is applied, the + 1 has to be added to chi i
- * in order to get the kappa operator. kappa * phi = chi * phi + phi
- * This has to be done manually.
+ * @class X2COperator
+ * @brief Implements a Gaussian amfX2C operator, that is a sum of Gaussian functions approximating the coupling
+ * operator in Dirac theory.
+ * Coupling operator R(r) = sum_ij C_ij * chi_i(r) * chi_j(r), where chi_i are contracted
+ * GTOs read from a Gaussian-code basis set file and C is a matrix representation of the operator
+ * in that AO basis (e.g. produced by an external Gaussian-basis quantum chemistry code). The
+ * expansion is built analytically as a sum of Gaussians (MRCPP GaussExp) and then projected onto
+ * the MW representation, avoiding numerical differentiation/integration of the Gaussian basis.
  */
-// class ZoraOperator final : public RankZeroOperator {
-class ZoraOperator final : public CouplingOperator {
+class X2COperator final : public CouplingOperator {
 public:
     /**
-     * @brief Constructor for the ZoraOperator that contains the chi = kappa - 1 function.
-     * @param vz The potential used to calculate the kappa function.
-     * @param c Speed of light.
-     * @param proj_prec The precision of the MW projection.
-     * @param inverse If true, the inverse of the chi function is calculated.
+     * @param bas_file Basis set file (LSDalton/Intgrl format) defining the GTO basis the matrix is expressed in.
+     * @param mat_file File holding the C_ij matrix, in the AO ordering produced by that basis file.
+     * @param proj_prec Precision of the MW projection.
+     * @param screen GTO screening in standard deviations (negative disables screening).
+     * @param name Name assigned to the resulting operator.
      */
-    ZoraOperator(QMPotential &vz, double c, double proj_prec, bool inverse = false);
-
-    ZoraOperator(std::shared_ptr<QMPotential> relativisticDampening, std::string name);
+    X2COperator(const std::string &bas_file, const std::string &mat_file, double proj_prec,  double screen, const std::string &name = "R");
 };
 
 } // namespace mrchem

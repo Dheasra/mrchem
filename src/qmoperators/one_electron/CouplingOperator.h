@@ -26,33 +26,26 @@
 #pragma once
 
 #include "tensor/RankZeroOperator.h"
-#include "qmoperators/one_electron/CouplingOperator.h"
 #include <string>
 
 namespace mrchem {
 
-class QMPotential;
-
 /**
- * @class ZoraOperator
- * @brief Implements chi = kappa - 1 relativistic dampening function. This has to be done in order to
- * avoid numerical instabilities in the ZORA operator. Whenever this operator is applied, the + 1 has to be added to chi i
- * in order to get the kappa operator. kappa * phi = chi * phi + phi
- * This has to be done manually.
- */
-// class ZoraOperator final : public RankZeroOperator {
-class ZoraOperator final : public CouplingOperator {
+ * @class CouplingOperator
+ * @brief parent class to hold all types of coupling operators in Dirac theory, such as ZORA, X2C, Cowan-Griffin/Wood-Boring, Jacopo's SWORD, etc 
+ */ 
+class CouplingOperator : public RankZeroOperator {
 public:
     /**
-     * @brief Constructor for the ZoraOperator that contains the chi = kappa - 1 function.
+     * @brief Constructor for the CouplingOperator that contains the chi = kappa - 1 function.
      * @param vz The potential used to calculate the kappa function.
      * @param c Speed of light.
      * @param proj_prec The precision of the MW projection.
      * @param inverse If true, the inverse of the chi function is calculated.
-     */
-    ZoraOperator(QMPotential &vz, double c, double proj_prec, bool inverse = false);
+    //  */
+    // template CouplingOperator(QMPotential &vz, double c, double proj_prec, bool inverse = false);
 
-    ZoraOperator(std::shared_ptr<QMPotential> relativisticDampening, std::string name);
+    // template CouplingOperator(std::shared_ptr<QMPotential> relativisticDampening, std::string name);
 };
 
 } // namespace mrchem
