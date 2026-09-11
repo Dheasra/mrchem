@@ -50,6 +50,7 @@ ZoraOperator::ZoraOperator(QMPotential &vz, double c, double proj_prec, bool inv
             k->real().map([two_cc](double val) { return (two_cc - val) / two_cc - 1.0; });
         } else {
             k->real().map([two_cc](double val) { return (val) / (two_cc - val); });
+            // k->real().map([two_cc](double val) { return 1 / (two_cc/(val) - 1); }); //test debug massive memory usage of chi
         }
         k->real().crop(proj_prec);
     }

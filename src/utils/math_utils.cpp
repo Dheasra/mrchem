@@ -85,6 +85,39 @@ DoubleMatrix read_matrix_file(const std::string &file) {
     return M;
 }
 
+/** @brief Read complex Eigen matrix from file
+ *
+ * @param file: file name
+ *
+ * Format of the file:
+ * First entry is the number of rows and columns of the matrix.
+ * After this all entries of the matrix are listed, columns
+ * concatenated into a long vector, one "real imag" pair per line.
+ */
+ComplexMatrix read_matrix_file_cplx(const std::string &file) {
+    int nRows, nCols;
+    std::ifstream ifs(file.c_str());
+    if (not ifs) MSG_ERROR("Failed to open file: " << file);
+
+    std::string line;
+    std::getline(ifs, line);
+    std::istringstream iss_dim(line);
+    iss_dim >> nRows >> nCols;
+
+    ComplexMatrix M = ComplexMatrix::Zero(nRows, nCols);
+    for (int i = 0; i < nCols; i++) {
+        for (int j = 0; j < nRows; j++) {
+            std::getline(ifs, line);
+            std::istringstream iss(line);
+            double re = 0.0, im = 0.0;
+            iss >> re >> im;
+            M(j, i) = ComplexDouble(re, im);
+        }
+    }
+
+    return M;
+}
+
 /** @brief Compute the exponential of minus a skew (=antisymmetric) real matrix
  *
  * @param A: matrix to exponentiate

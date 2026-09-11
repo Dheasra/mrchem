@@ -83,7 +83,7 @@ public:
     Orbital operator()(Orbital inp, int alpha = 0);
     Orbital dagger(Orbital inp);
 
-    OrbitalVector operator()(OrbitalVector &inp, int alpha = 0); //todo implémenter alpha
+    OrbitalVector operator()(OrbitalVector &inp, int alpha = 0);
     OrbitalVector dagger(OrbitalVector &inp);
 
     ComplexDouble operator()(Orbital bra, Orbital ket);

@@ -85,10 +85,15 @@ public:
     void setLightSpeed(double c) { this->light_speed = c; }
     double getLightSpeed() const { return this->light_speed; }
 
+    // ZORA methods
     bool isAZora() const { return zora_is_azora; }
     bool isZora() const { return (zora_has_nuc || zora_has_coul || zora_has_xc); }
     void setZoraType(bool has_nuc, bool has_coul, bool has_xc, bool is_azora);
     void setAZORADirectory(const std::string &dir) { azora_dir = dir; }
+    // X2C methods (Maybe we should name it differently, but for simplicity and now, it shall be "X2C")
+    bool isX2C() const {return (x2c_is_ASC); }
+    void setX2CType(bool is_amf); //Not an apt name for now, but serves as the setter for amfX2C
+
     void setNucs(const Nuclei &nucs) { this->nucs = nucs; }
 
     SCFEnergy trace(OrbitalVector &Phi, const Nuclei &nucs);
@@ -99,6 +104,7 @@ public:
     OrbitalVector buildHelmholtzArgument(double prec, OrbitalVector Phi, ComplexMatrix F_mat, ComplexMatrix L_mat);
 
 private:
+    // ZORA / AZORA flags
     bool zora_has_nuc{false};
     bool zora_has_coul{false};
     bool zora_has_xc{false};
@@ -106,10 +112,13 @@ private:
     std::string azora_dir = "";
     std::string azora_dir_src = "";
     std::string azora_dir_install = "";
+    // X2C flags
+    bool x2c_is_ASC{false}; // atomic small component (inspired by amfX2C)
+    // bool x2c_is_exact2c{false}; // Placeholder for a true variant of X2C, by solving the algebraic Riccati equation obtained from the X2C hypothesis 
 
     double light_speed{-1.0};
     double exact_exchange{1.0};
-    RankZeroOperator zora_base;
+    RankZeroOperator zora_base; //V_zora in the 2024 1C paper
 
     double prec;
     Nuclei nucs;
@@ -124,8 +133,8 @@ private:
     std::shared_ptr<XCOperator> xc{nullptr};
     std::shared_ptr<ReactionOperator> Ro{nullptr};       // Reaction field operator
     std::shared_ptr<ElectricFieldOperator> ext{nullptr}; // Total external potential
-    std::shared_ptr<CouplingOperator> chi{nullptr};      // chi = V/(2mc^2 - V) for ZORA
-    std::shared_ptr<CouplingOperator> chi_inv{nullptr};
+    std::shared_ptr<CouplingOperator> chi{nullptr};      // chi = V/(2mc^2 - V) for ZORA, chi = X for "X2C"
+    std::shared_ptr<CouplingOperator> chi_inv{nullptr};  // chi_inv = (kappa^-1)-1 for ZORA, unused for "X2C" 
     std::shared_ptr<ProjectorOperator> pp_projector{nullptr};
 
 
@@ -133,6 +142,7 @@ private:
     OrbitalVector buildHelmholtzArgumentZORA(OrbitalVector &Phi, OrbitalVector &Psi, DoubleVector eps, double prec);
     OrbitalVector buildHelmholtzArgumentNREL(OrbitalVector &Phi, OrbitalVector &Psi);
     OrbitalVector buildHelmholtzArgumentCompact(OrbitalVector &Phi, OrbitalVector &Psi);
+    OrbitalVector buildHelmholtzArgumentX2C(OrbitalVector &Phi, OrbitalVector &Psi, DoubleVector eps, double prec);
     std::shared_ptr<AZoraPotential> chiPot{nullptr}; // Potential for AZORA chi operator
     std::shared_ptr<QMPotential> chiInvPot{nullptr}; // Potential for AZORA chi_inv operator
 };

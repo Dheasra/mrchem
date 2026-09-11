@@ -34,25 +34,44 @@ namespace mrchem {
 class QMPotential;
 
 /**
- * @class X2COperator
- * @brief Implements a Gaussian amfX2C operator, that is a sum of Gaussian functions approximating the coupling
- * operator in Dirac theory.
+ * @class ASCOperator (Atomic small component)
+ * @brief Implements a Gaussian represented coupling operator, represented the small component as a
+ * fixed Gaussian representation for atomic calculations
  * Coupling operator R(r) = sum_ij C_ij * chi_i(r) * chi_j(r), where chi_i are contracted
  * GTOs read from a Gaussian-code basis set file and C is a matrix representation of the operator
  * in that AO basis (e.g. produced by an external Gaussian-basis quantum chemistry code). The
  * expansion is built analytically as a sum of Gaussians (MRCPP GaussExp) and then projected onto
  * the MW representation, avoiding numerical differentiation/integration of the Gaussian basis.
  */
-class X2COperator final : public CouplingOperator {
+class ASCOperator final : public CouplingOperator {
 public:
-    /**
-     * @param bas_file Basis set file (LSDalton/Intgrl format) defining the GTO basis the matrix is expressed in.
-     * @param mat_file File holding the C_ij matrix, in the AO ordering produced by that basis file.
+    /** @brief Construct a 2C CompFunctionVector from a set of 2C atomic GTO (in other words, simply project the Gaussian spinors into trees)
+     * @param large_bas_file Basis set file (LSDalton/Intgrl format) for the large component.
+     * @param large_coef_file Coefficient file, (nAO_large x 2) matrix: alpha, beta columns.
+     * @param small_bas_file Basis set file (LSDalton/Intgrl format) for the small component.
+     * @param small_coef_file Coefficient file, (nAO_small x 2) matrix: alpha, beta columns.
      * @param proj_prec Precision of the MW projection.
      * @param screen GTO screening in standard deviations (negative disables screening).
-     * @param name Name assigned to the resulting operator.
+     * @param coeff_thrs Coefficients with magnitude below this are dropped from the linear combination.
      */
-    X2COperator(const std::string &bas_file, const std::string &mat_file, double proj_prec,  double screen, const std::string &name = "R");
+    ASCOperator(const std::string &large_bas_file,
+                const std::string &large_coef_file,
+                const std::string &small_bas_file,
+                const std::string &small_coef_file,
+                double proj_prec,
+                double screen = -1.0,
+                double coeff_thrs = mrcpp::MachineZero);
+
+    //Getters
+    std::shared_ptr<mrcpp::CompFunctionVector> &getLargeComponents() { return this->large; }
+    std::shared_ptr<mrcpp::CompFunctionVector> &getSmallComponents() { return this->small; }
+
+    //operators override
+    OrbitalVector operator()(OrbitalVector &inp, int alpha = 0); //todo implémenter
+    ComplexMatrix ASCOperator::operator()(OrbitalVector &bra, OrbitalVector &ket);
+private:
+    std::shared_ptr<mrcpp::CompFunctionVector> large{nullptr}; ///< N_ao spinors, comp[0]=alpha, comp[1]=beta
+    std::shared_ptr<mrcpp::CompFunctionVector> small{nullptr}; ///< N_ao spinors, comp[0]=alpha, comp[1]=beta
 };
 
 } // namespace mrchem

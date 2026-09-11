@@ -42,6 +42,7 @@ DoubleVector init_nan(int I);
 DoubleMatrix init_nan(int I, int J);
 
 DoubleMatrix read_matrix_file(const std::string &file);
+ComplexMatrix read_matrix_file_cplx(const std::string &file);
 DoubleMatrix skew_matrix_exp(const DoubleMatrix &A);
 ComplexMatrix hermitian_matrix_pow(const ComplexMatrix &A, double b);
 ComplexMatrix diagonalize_hermitian_matrix(const ComplexMatrix &A, DoubleVector &diag);
