@@ -67,8 +67,9 @@ public:
     std::shared_ptr<mrcpp::CompFunctionVector> &getSmallComponents() { return this->small; }
 
     //operators override
-    OrbitalVector operator()(OrbitalVector &inp, int alpha = 0); //todo implémenter
-    ComplexMatrix ASCOperator::operator()(OrbitalVector &bra, OrbitalVector &ket);
+    OrbitalVector operator()(OrbitalVector &inp, int alpha = 0); 
+    ComplexMatrix operator()(OrbitalVector &bra, OrbitalVector &ket);
+    ComplexDouble trace(OrbitalVector &Phi);
 private:
     std::shared_ptr<mrcpp::CompFunctionVector> large{nullptr}; ///< N_ao spinors, comp[0]=alpha, comp[1]=beta
     std::shared_ptr<mrcpp::CompFunctionVector> small{nullptr}; ///< N_ao spinors, comp[0]=alpha, comp[1]=beta

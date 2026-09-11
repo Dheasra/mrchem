@@ -28,6 +28,7 @@
 #include <MRCPP/Gaussians>
 #include <MRCPP/Printer>
 #include <MRCPP/Timer>
+#include <MRCPP/utils/CompFunction.h>
 
 #include "utils/gto_utils/Intgrl.h"
 #include "utils/gto_utils/OrbitalExp.h"
@@ -40,7 +41,7 @@ using mrcpp::Timer;
 
 namespace mrchem {
 
-namespace {
+// namespace {
 
 /** @brief Construct a 2C CompFunctionVector from a set of 2C atomic GTO (in other words, simply project the Gaussian spinors into trees)
  *  @param bas_file: basis set file directory
@@ -58,7 +59,7 @@ std::shared_ptr<mrcpp::CompFunctionVector> project_spinor_set(const std::string 
     gto_utils::OrbitalExp ao_exp(intgrl);
     int nAO = ao_exp.size();
 
-    ComplexMatrix C = math_utils::read_complex_matrix_file(coef_file);
+    ComplexMatrix C = math_utils::read_matrix_file_cplx(coef_file);
     if (C.rows() != 2 * nAO || C.cols() != nAO) MSG_ABORT("Coupling coefficient matrix must be (2*N_ao x N_ao): stacked alpha/beta rows, one spinor per column");
 
     // Project each unique real AO into MW space once.
@@ -84,7 +85,7 @@ std::shared_ptr<mrcpp::CompFunctionVector> project_spinor_set(const std::string 
                 mrcpp::CompFunction<3> term;
                 mrcpp::deep_copy(term, ao_real[j]); // independent copy: linear_combination mutates its inputs
                 coefs.push_back(c_ij);
-                terms.push_back(std::move(term));
+                terms.push_back(term);
             }
             if (coefs.empty()) {
                 spinor.complex(c); // lazily allocates a zero-valued component
@@ -96,12 +97,13 @@ std::shared_ptr<mrcpp::CompFunctionVector> project_spinor_set(const std::string 
             spinor.setCplx(psi_c.CompC[0], c);
             psi_c.CompC[0] = nullptr; // ownership transferred to spinor, avoid double free
         }
-        (*spinors)[i] = spinor;
+        // (*spinors)[i] = spinor;
+        mrcpp:deep_copy((*spinors)[i], spinor);
     }
     return spinors;
 }
 
-} // namespace
+// } // namespace
 
 ASCOperator::ASCOperator(const std::string &large_bas_file,
                          const std::string &large_coef_file,
