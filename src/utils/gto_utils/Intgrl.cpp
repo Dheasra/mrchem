@@ -44,6 +44,14 @@ Intgrl::Intgrl(const std::string &file) {
     ifs.close();
 }
 
+Intgrl::Intgrl(const std::vector<Nucleus> &nucs, const std::vector<AOBasis> &bases) {
+    if (nucs.size() != bases.size()) MSG_ABORT("Nuclei and AOBasis vectors must have the same size");
+    for (size_t i = 0; i < nucs.size(); i++) {
+        this->nuclei.push_back(new Nucleus(nucs[i]));
+        this->basis.push_back(new AOBasis(bases[i]));
+    }
+}
+
 Intgrl::~Intgrl() {
     for (auto &i : this->nuclei) {
         if (i != nullptr) { delete i; }

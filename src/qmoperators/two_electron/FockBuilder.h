@@ -74,6 +74,7 @@ public:
     std::shared_ptr<ElectricFieldOperator> &getExtOperator() { return this->ext; }
     std::shared_ptr<ReactionOperator> &getReactionOperator() { return this->Ro; }
     std::shared_ptr<AZoraPotential> &getAZoraChiPotential() { return this->chiPot; }
+    std::shared_ptr<CouplingOperator> &getCouplingOperator() { return this->chi; } //needed for ASC, not needded for ZORA but would still work 
     std::shared_ptr<ProjectorOperator> &getProjectorOperator() { return this->pp_projector; }
 
     void rotate(const ComplexMatrix &U);
@@ -92,7 +93,7 @@ public:
     void setAZORADirectory(const std::string &dir) { azora_dir = dir; }
     // X2C methods (Maybe we should name it differently, but for simplicity and now, it shall be "X2C")
     bool isX2C() const {return (x2c_is_ASC); }
-    void setX2CType(bool is_amf); //Not an apt name for now, but serves as the setter for amfX2C
+    void setX2CType(bool isASC); //Not an apt name for now, but serves as the setter for amfX2C
 
     void setNucs(const Nuclei &nucs) { this->nucs = nucs; }
 

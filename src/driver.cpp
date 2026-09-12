@@ -59,6 +59,7 @@
 #include "qmoperators/one_electron/NuclearGradientOperator.h"
 #include "qmoperators/one_electron/NuclearOperator.h"
 #include "qmoperators/one_electron/ZoraOperator.h"
+#include "qmoperators/one_electron/ASCOperator.h"
 
 #include "qmoperators/one_electron/H_BB_dia.h"
 #include "qmoperators/one_electron/H_BM_dia.h"
@@ -1375,6 +1376,27 @@ void driver::build_fock_operator(const json &json_fock, Molecule &mol, FockBuild
             F.getAZoraChiPotential() = std::make_shared<AZoraPotential>(nuclei, adap, azora_dir_final, share, c);
             F.setNucs(nuclei);
         }
+    } else if (json_fock.contains("asc_operator")) {
+        auto c = PhysicalConstants::get("light_speed");
+        F.setLightSpeed(c);
+
+        bool is_asc = json_fock["asc_operator"]["isASC"];
+        F.setX2CType(is_asc);
+
+        std::string bas_dir = ""; //basis set files directory
+        if (json_fock["asc_operator"].contains("bas_dir_path")) { bas_dir = json_fock["asc_operator"]["bas_dir_path"]; }
+        std::string coeff_dir = ""; //basis set files directory
+        if (json_fock["asc_operator"].contains("coeff_dir_path")) { coeff_dir = json_fock["asc_operator"]["coeff_dir_path"]; }
+
+        mrchem::Nuclei nuclei = mol.getNuclei(); //Nuclei is defined as a vector of nucleus
+        std::vector<std::string> basis_files_paths; //names of basis set files within bas_dir
+        std::vector<std::string> large_coeff_paths; //names of large coefficient matrices files within coeff_dir
+        std::vector<std::string> small_coeff_paths; //names of small coefficient matrices files within coeff_dir
+        for (int nuc=0; nuc<nuclei.size();nuc++){
+            //todo
+        }
+        auto proj_prec = json_fock["nuclear_operator"]["proj_prec"]; //place holder, will eventually need to be adapted to its own parameter
+        F.getCouplingOperator() = std::make_shared<ASCOperator>(nuclei, basis_files_paths, large_coeff_paths, small_coeff_paths, proj_prec);
     }
     ///////////////////////////////////////////////////////////
     //////////////////   Coulomb Operator   ///////////////////
@@ -1527,7 +1549,6 @@ void driver::build_fock_operator(const json &json_fock, Molecule &mol, FockBuild
 
         mrdft::Factory xc_factory(*MRA);
         if (n_components > 1) xc_spin = false; //2+ Components: real-space/spin-space not separable, always use total density
-        MSG_INFO("qqqqqqqqqqqqqq "<< n_components <<" xc_spin="<< xc_spin);
         xc_factory.setSpin(xc_spin);
         xc_factory.setLibxc((xc_lib == "libxc") ? true : false);
         xc_factory.setOrder(xc_order);

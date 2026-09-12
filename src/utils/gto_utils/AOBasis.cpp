@@ -98,5 +98,24 @@ GaussExp<3> AOBasis::getNormBasis(const mrcpp::Coord<3> &center) const {
     return abas;
 }
 
+AOBasis generate_rkb_basis(const AOBasis &large) {
+    AOBasis small;
+    for (int n = 0; n < large.size(); n++) {
+        const AOContraction &ctr = large.getContraction(n);
+        int l = ctr.getMoment();
+
+        AOContraction ctr_up(l + 1);
+        for (int p = 0; p < ctr.size(); p++) ctr_up.append(ctr.getExp(p), ctr.getCoef(p));
+        small.append(ctr_up);
+
+        if (l > 0) {
+            AOContraction ctr_down(l - 1);
+            for (int p = 0; p < ctr.size(); p++) ctr_down.append(ctr.getExp(p), ctr.getCoef(p));
+            small.append(ctr_down);
+        }
+    }
+    return small;
+}
+
 } // namespace gto_utils
 } // namespace mrchem

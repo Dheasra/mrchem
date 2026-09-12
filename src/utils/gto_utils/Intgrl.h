@@ -42,6 +42,7 @@ class AOBasis;
 class Intgrl final {
 public:
     Intgrl(const std::string &file);
+    Intgrl(const std::vector<Nucleus> &nucs, const std::vector<AOBasis> &bases);
     ~Intgrl();
 
     int getNNuclei() const { return this->nuclei.size(); }

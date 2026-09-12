@@ -72,6 +72,19 @@ def write_scf_fock(user_dict, wf_dict, origin):
         }
         if user_dict["ZORA"]["azora_potential_path"].lower() != "none":
             fock_dict["zora_operator"]["azora_potential_path"] = user_dict["ZORA"]["azora_potential_path"]
+    # Atomic Small Component (X2C)
+    if user_dict["WaveFunction"]["relativity"].lower() == "asc":
+            fock_dict["zora_operator"] = {
+                "include_nuclear": False,
+                "include_coulomb": False,
+                "include_xc": False,
+                "isAZORA": False
+            }
+            fock_dict["asc_operator"] = {
+                            "isASC": True
+                        }
+            if user_dict["ASC"]["bas_dir_path"].lower() != "none":
+                fock_dict["asc_operator"]["bas_dir_path"] = user_dict["ASC"]["bas_dir_path"]
 
     # Kinetic
     fock_dict["kinetic_operator"] = {"derivative": user_dict["Derivatives"]["kinetic"]}

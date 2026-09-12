@@ -642,6 +642,10 @@ void FockBuilder::setZoraType(bool has_nuc, bool has_coul, bool has_xc, bool is_
     this->zora_is_azora = is_azora;
 }
 
+void FockBuilder::setX2CType(bool isASC) {
+    this->x2c_is_ASC = isASC;
+}
+
 std::shared_ptr<QMPotential> FockBuilder::collectZoraBasePotential() {
     Timer timer;
     auto vz = std::make_shared<QMPotential>(1, false); // normal way

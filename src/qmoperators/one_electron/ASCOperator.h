@@ -45,19 +45,22 @@ class QMPotential;
  */
 class ASCOperator final : public CouplingOperator {
 public:
-    /** @brief Construct a 2C CompFunctionVector from a set of 2C atomic GTO (in other words, simply project the Gaussian spinors into trees)
-     * @param large_bas_file Basis set file (LSDalton/Intgrl format) for the large component.
-     * @param large_coef_file Coefficient file, (nAO_large x 2) matrix: alpha, beta columns.
-     * @param small_bas_file Basis set file (LSDalton/Intgrl format) for the small component.
-     * @param small_coef_file Coefficient file, (nAO_small x 2) matrix: alpha, beta columns.
+    /** @brief Construct a 2C CompFunctionVector from a set of 4C atomic GTO (in other words, simply project the Gaussian spinors into trees)
+     * @param nucs Real molecular geometry; nucs[k] gives the position atom k is translated to.
+     * @param large_bas_files One large-component basis file per atom (same ordering as nucs).
+     * @param large_coef_files One large-component coefficient file per atom: atom k's file holds
+     *        a (2*N_ao_k x N_ao_k) complex matrix (stacked alpha/beta AO rows, one spinor per column).
+     * @param small_coef_files One small-component coefficient file per atom: atom k's file holds a
+     *        (2*N_ao_k' x N_ao_k') complex matrix, where N_ao_k' is the RKB-generated small-component
+     *        AO count derived from large_bas_files[k].
      * @param proj_prec Precision of the MW projection.
      * @param screen GTO screening in standard deviations (negative disables screening).
      * @param coeff_thrs Coefficients with magnitude below this are dropped from the linear combination.
      */
-    ASCOperator(const std::string &large_bas_file,
-                const std::string &large_coef_file,
-                const std::string &small_bas_file,
-                const std::string &small_coef_file,
+    ASCOperator(const Nuclei &nucs,
+                const std::vector<std::string> &large_bas_files,
+                const std::vector<std::string> &large_coef_files,
+                const std::vector<std::string> &small_coef_files,
                 double proj_prec,
                 double screen = -1.0,
                 double coeff_thrs = mrcpp::MachineZero);

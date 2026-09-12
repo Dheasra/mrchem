@@ -63,5 +63,15 @@ private:
     std::vector<AOContraction *> ctrs;
 };
 
+/** @brief Generate the restricted-kinetic-balance (RKB) small-component basis from a
+ * large-component one.
+ *
+ * Under RKB (the default in 4-component codes such as DIRAC), the small-component basis is not
+ * chosen independently: for every large-component shell of angular momentum l, RKB generates
+ * small-component shells at l+1 and, if l>0, l-1, built from the identical exponents and
+ * contraction coefficients as the parent large-component shell.
+ */
+AOBasis generate_rkb_basis(const AOBasis &large);
+
 } // namespace gto_utils
 } // namespace mrchem

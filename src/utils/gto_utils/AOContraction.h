@@ -55,6 +55,10 @@ public:
     int getMoment() const { return this->L; }
     void setMoment(int l) { this->L = l; }
 
+    int size() const { return this->expo.size(); }
+    double getExp(int i) const { return this->expo[i]; }
+    double getCoef(int i) const { return this->coefs[i]; }
+
     friend std::ostream &operator<<(std::ostream &o, const AOContraction &c) {
         o << " " << c.L << " " << c.coefs.size() << std::endl;
         for (unsigned int i = 0; i < c.expo.size(); i++) { o << "    " << c.expo[i] << "   " << c.coefs[i] << std::endl; }
