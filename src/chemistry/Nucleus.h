@@ -110,6 +110,11 @@ public:
     double getAtomicNumber() const { return this->element->getZ(); }
 
     /**
+     * get the atomic symbol of the nucleus. Useful to fetch files automatically
+     */
+    std::string getSymbol() const { return this->element->getSymbol(); }
+
+    /**
      * Get the pseudopotential data of the nucleus.
      */
     std::shared_ptr<PseudopotentialData> getPseudopotentialData() const {

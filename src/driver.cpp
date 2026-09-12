@@ -1385,15 +1385,20 @@ void driver::build_fock_operator(const json &json_fock, Molecule &mol, FockBuild
 
         std::string bas_dir = ""; //basis set files directory
         if (json_fock["asc_operator"].contains("bas_dir_path")) { bas_dir = json_fock["asc_operator"]["bas_dir_path"]; }
-        std::string coeff_dir = ""; //basis set files directory
+        std::string coeff_dir = ""; //coefficient matrix files directory
         if (json_fock["asc_operator"].contains("coeff_dir_path")) { coeff_dir = json_fock["asc_operator"]["coeff_dir_path"]; }
+        if (bas_dir == "" or coeff_dir == "") MSG_ABORT("Missing paths for the basis set files and/or coefficent matrices. Basis dir="<< bas_dir << " Coefficent dir="<<coeff_dir);
 
+        // Getting the paths to the relevant files
         mrchem::Nuclei nuclei = mol.getNuclei(); //Nuclei is defined as a vector of nucleus
         std::vector<std::string> basis_files_paths; //names of basis set files within bas_dir
         std::vector<std::string> large_coeff_paths; //names of large coefficient matrices files within coeff_dir
         std::vector<std::string> small_coeff_paths; //names of small coefficient matrices files within coeff_dir
         for (int nuc=0; nuc<nuclei.size();nuc++){
-            //todo
+            auto nuc_symbol = nuclei[nuc].getSymbol() ;
+            basis_files_paths.push_back(bas_dir+nuc_symbol);
+            large_coeff_paths.push_back(coeff_dir+"large"+nuc_symbol);
+            small_coeff_paths.push_back(coeff_dir+"small"+nuc_symbol);
         }
         auto proj_prec = json_fock["nuclear_operator"]["proj_prec"]; //place holder, will eventually need to be adapted to its own parameter
         F.getCouplingOperator() = std::make_shared<ASCOperator>(nuclei, basis_files_paths, large_coeff_paths, small_coeff_paths, proj_prec);

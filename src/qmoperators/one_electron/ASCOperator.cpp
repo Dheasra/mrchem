@@ -45,66 +45,6 @@ namespace mrchem {
 
 // namespace {
 
-/** @brief Construct a 2C CompFunctionVector from a set of 2C atomic GTO (in other words, simply project the Gaussian spinors into trees)
- *  @param bas_file: basis set file directory
- *  @param coef_file: Coeff matrix for the 2C GTO spinor
- *  @param proj_prec: precision of the tree
- *  @param screen: screening parameter
- *  @param coeff_thrs: 
- *
- *  Build the N_ao complex 2-component (alpha, beta) spinors for one basis/coefficient pair.
- *  Each AO is projected into MW space once and cached; every spinor component is then a cheap
- *  complex-coefficient linear combination of (deep copies of) those cached real trees.
- */
-// std::shared_ptr<mrcpp::CompFunctionVector> project_spinor_set(const std::string &bas_file, const std::string &coef_file, double proj_prec, double screen, double coeff_thrs) {
-//     gto_utils::Intgrl intgrl(bas_file);
-//     gto_utils::OrbitalExp ao_exp(intgrl);
-//     int nAO = ao_exp.size();
-
-//     ComplexMatrix C = math_utils::read_matrix_file_cplx(coef_file);
-//     if (C.rows() != 2 * nAO || C.cols() != nAO) MSG_ABORT("Coupling coefficient matrix must be (2*N_ao x N_ao): stacked alpha/beta rows, one spinor per column");
-
-//     // Project each unique real AO into MW space once.
-//     std::vector<mrcpp::CompFunction<3>> ao_real(nAO);
-//     for (int j = 0; j < nAO; j++) {
-//         GaussExp<3> ao_j = ao_exp.getAO(j);
-//         ao_j.calcScreening(screen);
-//         ao_real[j] = mrcpp::CompFunction<3>(0, false, 1);
-//         mrcpp::build_grid(ao_real[j].real(), ao_j);
-//         mrcpp::project(proj_prec, ao_real[j].real(), ao_j);
-//     }
-
-//     auto spinors = std::make_shared<mrcpp::CompFunctionVector>(nAO);
-//     for (int i = 0; i < nAO; i++) {
-//         mrcpp::CompFunction<3> spinor(0, false, 2); //2 component spinor
-//         spinor.defcomplex();
-//         for (int c = 0; c < 2; c++) {
-//             std::vector<ComplexDouble> coefs;
-//             std::vector<mrcpp::CompFunction<3>> terms;
-//             for (int j = 0; j < nAO; j++) {
-//                 ComplexDouble c_ij = C(c * nAO + j, i);
-//                 if (std::abs(c_ij) < coeff_thrs) continue;
-//                 mrcpp::CompFunction<3> term;
-//                 mrcpp::deep_copy(term, ao_real[j]); // independent copy: linear_combination mutates its inputs
-//                 coefs.push_back(c_ij);
-//                 terms.push_back(term);
-//             }
-//             if (coefs.empty()) {
-//                 spinor.complex(c); // lazily allocates a zero-valued component
-//                 continue;
-//             }
-//             mrcpp::CompFunction<3> psi_c;
-//             mrcpp::linear_combination(psi_c, coefs, terms, proj_prec);
-//             //insert the linear combination inside the component c of the spinor
-//             spinor.setCplx(psi_c.CompC[0], c);
-//             psi_c.CompC[0] = nullptr; // ownership transferred to spinor, avoid double free
-//         }
-//         // (*spinors)[i] = spinor;
-//         mrcpp:deep_copy((*spinors)[i], spinor);
-//     }
-//     return spinors;
-// }
-
 // Assemble the molecule-wide set of complex 2-component (alpha, beta) spinors from one
 // (bas_file, coef_file) pair per atom. Each atom's basis is read at whatever coordinate its file
 // contains and then translated to its real position in nucs (mirrors
@@ -112,12 +52,8 @@ namespace mrchem {
 // is projected into MW space once and cached; since each atom's coefficient matrix comes from an
 // independent isolated-atom calculation, atoms are combined block-diagonally: atom k's spinors are
 // linear combinations of atom k's own AOs only.
-std::shared_ptr<mrcpp::CompFunctionVector> project_molecular_spinor_set(const Nuclei &nucs,
-                                                                         const std::vector<std::string> &bas_files,
-                                                                         const std::vector<std::string> &coef_files,
-                                                                         double proj_prec,
-                                                                         double screen,
-                                                                         double coeff_thrs) {
+std::shared_ptr<mrcpp::CompFunctionVector> project_molecular_spinor_set(const Nuclei &nucs, const std::vector<std::string> &bas_files, const std::vector<std::string> &coef_files, double proj_prec, double screen, double coeff_thrs) {
+    MSG_WARN("DEPRECATED FUNCTION. Use at your own peril.")
     int nAtoms = nucs.size();
     if (static_cast<int>(bas_files.size()) != nAtoms || static_cast<int>(coef_files.size()) != nAtoms)
         MSG_ABORT("Need exactly one basis file and one coefficient file per atom");
@@ -184,13 +120,7 @@ std::shared_ptr<mrcpp::CompFunctionVector> project_molecular_spinor_set(const Nu
 
 // Project one atom's (already positioned) AO basis into MW space once, cache it into ao_real, and
 // append its block-diagonal contribution (spinors built only from this atom's own AOs) to spinors.
-void add_atom_spinors(gto_utils::Intgrl &intgrl,
-                       const std::string &coef_file,
-                       double proj_prec,
-                       double screen,
-                       double coeff_thrs,
-                       std::vector<mrcpp::CompFunction<3>> &ao_real,
-                       mrcpp::CompFunctionVector &spinors) {
+void add_atom_spinors(gto_utils::Intgrl &intgrl, const std::string &coef_file, double proj_prec, double screen, double coeff_thrs, std::vector<mrcpp::CompFunction<3>> &ao_real, mrcpp::CompFunctionVector &spinors) {
     gto_utils::OrbitalExp ao_exp(intgrl);
     int nAO = ao_exp.size();
 
@@ -234,12 +164,7 @@ void add_atom_spinors(gto_utils::Intgrl &intgrl,
     }
 }
 
-std::shared_ptr<mrcpp::CompFunctionVector> project_large_spinor_set(const Nuclei &nucs,
-                                                                     const std::vector<std::string> &bas_files,
-                                                                     const std::vector<std::string> &coef_files,
-                                                                     double proj_prec,
-                                                                     double screen,
-                                                                     double coeff_thrs) {
+std::shared_ptr<mrcpp::CompFunctionVector> project_large_spinor_set(const Nuclei &nucs, const std::vector<std::string> &bas_files, const std::vector<std::string> &coef_files, double proj_prec, double screen, double coeff_thrs) {
     int nAtoms = nucs.size();
     if (static_cast<int>(bas_files.size()) != nAtoms || static_cast<int>(coef_files.size()) != nAtoms)
         MSG_ABORT("Need exactly one large-component basis file and one coefficient file per atom");
@@ -257,12 +182,7 @@ std::shared_ptr<mrcpp::CompFunctionVector> project_large_spinor_set(const Nuclei
 // Small-component basis is not read from a file: under restricted kinetic balance it is generated
 // mechanically from the large-component one (gto_utils::generate_rkb_basis), then translated to
 // the same real molecular position as the large component.
-std::shared_ptr<mrcpp::CompFunctionVector> project_small_spinor_set(const Nuclei &nucs,
-                                                                     const std::vector<std::string> &large_bas_files,
-                                                                     const std::vector<std::string> &coef_files,
-                                                                     double proj_prec,
-                                                                     double screen,
-                                                                     double coeff_thrs) {
+std::shared_ptr<mrcpp::CompFunctionVector> project_small_spinor_set(const Nuclei &nucs, const std::vector<std::string> &large_bas_files, const std::vector<std::string> &coef_files, double proj_prec, double screen, double coeff_thrs) {
     int nAtoms = nucs.size();
     if (static_cast<int>(large_bas_files.size()) != nAtoms || static_cast<int>(coef_files.size()) != nAtoms)
         MSG_ABORT("Need exactly one large-component basis file and one small-component coefficient file per atom");
@@ -282,13 +202,7 @@ std::shared_ptr<mrcpp::CompFunctionVector> project_small_spinor_set(const Nuclei
 
 // } // namespace
 
-ASCOperator::ASCOperator(const Nuclei &nucs,
-                        const std::vector<std::string> &large_bas_files,
-                        const std::vector<std::string> &large_coef_files,
-                        const std::vector<std::string> &small_coef_files,
-                        double proj_prec,
-                        double screen,
-                        double coeff_thrs) {
+ASCOperator::ASCOperator(const Nuclei &nucs, const std::vector<std::string> &large_bas_files, const std::vector<std::string> &large_coef_files, const std::vector<std::string> &small_coef_files, double proj_prec, double screen, double coeff_thrs) {
     Timer timer;
     this->large = project_large_spinor_set(nucs, large_bas_files, large_coef_files, proj_prec, screen, coeff_thrs);
     this->small = project_small_spinor_set(nucs, large_bas_files, small_coef_files, proj_prec, screen, coeff_thrs);

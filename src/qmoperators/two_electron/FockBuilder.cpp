@@ -597,7 +597,9 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
     MomentumOperator &p = momentum();
     RankZeroOperator &V = potential();
     // ASCOperator &chi = *this->chi; //I don't think I can instantiate it, because this->chi points to a CouplingOperator, but the operator here HAS to be an ASCOperator to work due to its overriden methods
-
+    auto asc = std::dynamic_pointer_cast<ASCOperator>(this->chi);
+    if (!asc) MSG_ABORT("Expected chi to be an ASCOperator here");
+    
     //Need to know if we have to apply the σ matrices in a MPI-safe way
     int Ncomponents = 1;
     for (int i = 0; i < Phi.size(); i++) {
@@ -606,11 +608,11 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
     }
     // bool rotate_spin = true; 
     if (Ncomponents <2) MSG_ABORT("Cannot use an 'exact 2 component' method with only "<< Ncomponents << " now can we?");
-
+    
     // Compute OrbitalVectors
     Timer t_pot;
     //compute X2C correction term c(σ·p)VR|ψ>
-    OrbitalVector termTwo = (*this->chi)(Phi);
+    OrbitalVector termTwo = (*asc)(Phi);
     termTwo = V(termTwo);
     for (int i = 0; i < Phi.size(); i++) {
         if (!mrcpp::mpi::my_func(i)) continue;
@@ -621,7 +623,7 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
         termTwo[i].add({1.0, 0.0}, nabla_Phi[1]);
         termTwo[i].add({1.0, 0.0}, nabla_Phi[2]);
         // multiply by c
-        for (int comp=0; comp<Ncomponents; comp++) termTwo[i].func_ptr->data.c1[comp] *= -c;
+        for (int comp=0; comp<Ncomponents; comp++) termTwo[i].func_ptr->data.c1[comp] *= (-1.0)*c;
         // Free memory space by discarding no longer relevant trees. Should help mitigate the memory usage spike from this function
         for (int dim=0; dim<3; dim++) nabla_Phi[dim].free();
     }
@@ -630,8 +632,18 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
     for (int i = 0; i < Phi.size(); i++) {
         if (!mrcpp::mpi::my_func(i)) continue;
         for (int comp=0; comp<Ncomponents; comp++) 
-            termOne[i].func_ptr->data.c1[comp] *= -eps[i];
+            termOne[i].func_ptr->data.c1[comp] *= (-1.0)*eps[i];
     }
+    // Add up all the terms to form the inhomogeneous part of the Helmholtz equation
+    Timer t_add;
+    OrbitalVector out = orbital::deep_copy(termOne);
+    for (int i = 0; i < out.size(); i++) {
+        if (not mrcpp::mpi::my_func(out[i])) continue;
+        out[i].add(1.0, termTwo[i]); 
+        out[i].add(1.0, Psi[i]);
+    };
+    mrcpp::print::time(2, "Adding contributions", t_add);
+    return out;
 }
 
 
