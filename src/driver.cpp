@@ -289,7 +289,6 @@ json driver::scf::run(const json &json_scf, Molecule &mol) {
     ////////////////   WAVEFUNCTION COMPONENTS  ///////////////
     ///////////////////////////////////////////////////////////
     int n_components = json_scf["spinor_components"];
-    std::cout << "driver::scf::run n_components: " << n_components << std::endl;
 
     ///////////////////////////////////////////////////////////
     ////////////////   Building Fock Operator   ///////////////
@@ -320,6 +319,7 @@ json driver::scf::run(const json &json_scf, Molecule &mol) {
                 Phi_mom = orbital::deep_copy(mol.getOrbitals());
             }
         }
+        MSG_INFO("spouetard");
         scf::guess_energy(json_guess, mol, F);
         json_out["initial_energy"] = mol.getSCFEnergy().json();
     } else {
@@ -616,11 +616,23 @@ bool driver::scf::guess_energy(const json &json_guess, Molecule &mol, FockBuilde
     auto &F_mat = mol.getFockMatrix();
 
     F_mat = ComplexMatrix::Zero(Phi.size(), Phi.size());
+
+    if (F.isX2C()) {
+        auto asc = std::dynamic_pointer_cast<ASCOperator>(F.getCouplingOperator());
+        if (!asc) MSG_ABORT("isX2C() true but chi is not an ASCOperator");
+        
+        orbital::orthonormalize_ASC(prec, Phi, F_mat, *asc);
+    }
+
     if (localize && rotate) orbital::localize(prec, Phi, F_mat);
 
+    MSG_INFO("badabim");
     F.setup(prec);
+    MSG_INFO("badaboum");
     F_mat = F(Phi, Phi);
+    MSG_INFO("patatra");
     mol.getSCFEnergy() = F.trace(Phi, nucs);
+    MSG_INFO("plouf");
     F.clear();
 
 
@@ -1340,6 +1352,7 @@ void driver::build_fock_operator(const json &json_fock, Molecule &mol, FockBuild
     ///////////////////////////////////////////////////////////
     //////////////////////   Zora Operator   //////////////////
     ///////////////////////////////////////////////////////////
+    MSG_INFO("tut est relatiffany");
     if (json_fock.contains("zora_operator")) {
         auto c = PhysicalConstants::get("light_speed");
         F.setLightSpeed(c);
@@ -1376,7 +1389,9 @@ void driver::build_fock_operator(const json &json_fock, Molecule &mol, FockBuild
             F.getAZoraChiPotential() = std::make_shared<AZoraPotential>(nuclei, adap, azora_dir_final, share, c);
             F.setNucs(nuclei);
         }
-    } else if (json_fock.contains("asc_operator")) {
+    } 
+    if (json_fock.contains("asc_operator")) {
+        MSG_INFO("PUTUTUTUTTUTUTTU");
         auto c = PhysicalConstants::get("light_speed");
         F.setLightSpeed(c);
 
@@ -1394,14 +1409,18 @@ void driver::build_fock_operator(const json &json_fock, Molecule &mol, FockBuild
         std::vector<std::string> basis_files_paths; //names of basis set files within bas_dir
         std::vector<std::string> large_coeff_paths; //names of large coefficient matrices files within coeff_dir
         std::vector<std::string> small_coeff_paths; //names of small coefficient matrices files within coeff_dir
+        std::vector<std::string> trees_paths; //names of small coefficient matrices files within coeff_dir
         for (int nuc=0; nuc<nuclei.size();nuc++){
             auto nuc_symbol = nuclei[nuc].getSymbol() ;
-            basis_files_paths.push_back(bas_dir+nuc_symbol);
-            large_coeff_paths.push_back(coeff_dir+"large"+nuc_symbol);
-            small_coeff_paths.push_back(coeff_dir+"small"+nuc_symbol);
+            basis_files_paths.push_back(bas_dir+"/"+nuc_symbol+".bas");
+            large_coeff_paths.push_back(coeff_dir+"/"+nuc_symbol+"_large.coef");
+            small_coeff_paths.push_back(coeff_dir+"/"+nuc_symbol+"_small.coef");
+            trees_paths.push_back(bas_dir+"/"+nuc_symbol);
         }
         auto proj_prec = json_fock["nuclear_operator"]["proj_prec"]; //place holder, will eventually need to be adapted to its own parameter
         F.getCouplingOperator() = std::make_shared<ASCOperator>(nuclei, basis_files_paths, large_coeff_paths, small_coeff_paths, proj_prec);
+        // F.getCouplingOperator() = std::make_shared<ASCOperator>(nuclei, trees_paths, trees_paths,  proj_prec); //placeholder mrcpp trees version
+;
     }
     ///////////////////////////////////////////////////////////
     //////////////////   Coulomb Operator   ///////////////////

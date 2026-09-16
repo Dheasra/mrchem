@@ -382,7 +382,7 @@ sections:
         docstring: |
           Path to the directory containing the AZORA potentials. If not specified, the default potentials will be used.
           Look into the readme file in the share/azora_potentials directory for information about the potential file format.
-  - name: ACS 
+  - name: ASC
     docstring: |
       Define required parameters for the atomic small component Hamiltonian.
     keywords:

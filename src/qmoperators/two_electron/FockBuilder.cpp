@@ -239,15 +239,19 @@ SCFEnergy FockBuilder::trace(OrbitalVector &Phi, const Nuclei &nucs) {
         // Largely the same as ZORA, except without NR energy added, because it is not relevant. 
         // Could be merged with the ZORA condition above, but I think it is slightly more readable
         // we assume that at least one orbital is owned by this MPI
+        MSG_INFO("tutest");
         int Ncomponents = 1;
         for (int i = 0; i < Phi.size(); i++) {
             if (!mrcpp::mpi::my_func(i)) continue;
             Ncomponents = std::max(Ncomponents, Phi[i].Ncomp()); //assumes all owned orbitals have the same number of components
         }
         Ncomponents = mrcpp::mpi::allreduce_max(Ncomponents, mrcpp::mpi::comm_wrk);
-        bool spinorial = ( Ncomponents > 1);
-        //second term doesn't inclue Pauli matrices (i.e. spinorial is false) because (σ·p)(σ·p) = p^2
-        E_kin = qmoperator::calc_kinetic_trace(momentum(), *this->chi, Phi, spinorial).real();
+        //we multiply by the speed of light here to avoid having to add it to the arguments of calc_kinetic_matrix, or having to rescale chi (or R in the real notation) by c
+        double c = getLightSpeed();
+        //downcasting the type of chi (which is held by a std::shared_ptr<CouplingOperator>), so that calc_kin_mat_lin_mom() sees the operator as an ASCOperator.
+        auto asc = std::dynamic_pointer_cast<ASCOperator>(this->chi);
+        if (!asc) MSG_ABORT("isX2C() true but chi is not an ASCOperator");
+        E_kin = (c)*qmoperator::calc_kinetic_trace_linear_momentum(momentum(), *asc, Phi).real();
     } else {
         E_kin = qmoperator::calc_kinetic_trace(momentum(), Phi);
     }
@@ -298,6 +302,7 @@ ComplexMatrix FockBuilder::operator()(OrbitalVector &bra, OrbitalVector &ket) {
         //If we have spinors, the kinetic operator is of the form (σ·p)V(σ·p), with σ being a Pauli matrix.
         //What this boolean does is enabling the application of the Pauli matrices along the x,y,z momentum operators.
         //NOTE! The second term does not change from being spinorial; (σ·p)(σ·p) = p^2 using the Dirac identity.
+        MSG_INFO("X2C of gold");
         int Ncomponents = 0;
         for (int i = 0; i < bra.size(); i++) {
             if (!mrcpp::mpi::my_func(i)) continue;
@@ -308,16 +313,26 @@ ComplexMatrix FockBuilder::operator()(OrbitalVector &bra, OrbitalVector &ket) {
             Ncomponents = std::max(Ncomponents, ket[i].Ncomp());
         }
         Ncomponents = mrcpp::mpi::allreduce_max(Ncomponents, mrcpp::mpi::comm_wrk);
-        bool spinorial = (Ncomponents > 1); //assumes all orbitals have the same number of components
         //we multiply by the speed of light here to avoid having to add it to the arguments of calc_kinetic_matrix, or having to rescale chi (or R in the real notation) by c
         double c = getLightSpeed();
-        T_mat = c*qmoperator::calc_kinetic_matrix(momentum(), *this->chi, bra, ket, spinorial);
+        //downcasting the type of chi (which is held by a std::shared_ptr<CouplingOperator>), so that calc_kin_mat_lin_mom() sees the operator as an ASCOperator.
+        auto asc = std::dynamic_pointer_cast<ASCOperator>(this->chi);
+        if (!asc) MSG_ABORT("isX2C() true but chi is not an ASCOperator");
+        T_mat = c*qmoperator::calc_kinetic_matrix_linear_momentum(momentum(), *asc, bra, ket); //+ c*qmoperator::calc_kinetic_matrix_linear_momentum(momentum(), *asc, ket, bra);
     } else {
         T_mat = qmoperator::calc_kinetic_matrix(momentum(), bra, ket);
     }
 
     ComplexMatrix V_mat = ComplexMatrix::Zero(bra.size(), ket.size());
     V_mat += potential()(bra, ket);
+
+    if (isX2C()) {
+        auto asc = std::dynamic_pointer_cast<ASCOperator>(this->chi);
+        if (!asc) MSG_ABORT("isX2C() true but chi is not an ASCOperator");
+        OrbitalVector xKet = (*asc)(ket);
+        OrbitalVector xBra = (*asc)(bra);
+        V_mat += (*getNuclearOperator ())(xBra, xKet); //Temporary, but getting the exchange operator working with the coupling operator is going to be quite some work for not much expectation value impact
+    }
 
     mrcpp::print::footer(2, t_tot, 2);
     if (plevel == 1) mrcpp::print::time(1, "Computing Fock matrix", t_tot);
@@ -594,6 +609,7 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
     // Get necessary operators
     double c = getLightSpeed();
     double two_cc = 2.0 * c * c;
+    MSG_INFO("x2c of aluminium");
     MomentumOperator &p = momentum();
     RankZeroOperator &V = potential();
     // ASCOperator &chi = *this->chi; //I don't think I can instantiate it, because this->chi points to a CouplingOperator, but the operator here HAS to be an ASCOperator to work due to its overriden methods
@@ -613,6 +629,7 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
     Timer t_pot;
     //compute X2C correction term c(σ·p)VR|ψ>
     OrbitalVector termTwo = (*asc)(Phi);
+    MSG_INFO("termtwo interactive phi_spin="<< Phi[0].spin() << " after X applied=" << termTwo[0].spin());
     termTwo = V(termTwo);
     for (int i = 0; i < Phi.size(); i++) {
         if (!mrcpp::mpi::my_func(i)) continue;
@@ -623,7 +640,7 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
         termTwo[i].add({1.0, 0.0}, nabla_Phi[1]);
         termTwo[i].add({1.0, 0.0}, nabla_Phi[2]);
         // multiply by c
-        for (int comp=0; comp<Ncomponents; comp++) termTwo[i].func_ptr->data.c1[comp] *= (-1.0)*c;
+        for (int comp=0; comp<Ncomponents; comp++) termTwo[i].func_ptr->data.c1[comp] *= (1.0)*c;
         // Free memory space by discarding no longer relevant trees. Should help mitigate the memory usage spike from this function
         for (int dim=0; dim<3; dim++) nabla_Phi[dim].free();
     }
@@ -632,7 +649,7 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
     for (int i = 0; i < Phi.size(); i++) {
         if (!mrcpp::mpi::my_func(i)) continue;
         for (int comp=0; comp<Ncomponents; comp++) 
-            termOne[i].func_ptr->data.c1[comp] *= (-1.0)*eps[i];
+            termOne[i].func_ptr->data.c1[comp] *= (1.0)*eps[i];
     }
     // Add up all the terms to form the inhomogeneous part of the Helmholtz equation
     Timer t_add;

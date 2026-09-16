@@ -32,6 +32,7 @@
 #include "qmfunctions/orbital_utils.h"
 #include "qmoperators/QMPotential.h"
 #include "qmoperators/one_electron/MomentumOperator.h"
+#include "qmoperators/one_electron/ASCOperator.h"
 
 using mrcpp::Printer;
 using mrcpp::Timer;
@@ -45,8 +46,8 @@ ComplexMatrix calc_kinetic_matrix_component(int d, MomentumOperator &p, OrbitalV
 ComplexMatrix calc_kinetic_matrix_component(int d, MomentumOperator &p, RankZeroOperator &V, OrbitalVector &bra, OrbitalVector &ket);
 //ZORA spinorial relativistic
 ComplexMatrix calc_kinetic_matrix_component(MomentumOperator &p, RankZeroOperator &V, OrbitalVector &bra, OrbitalVector &ket);
-//X2C/DIRAC spinorial relativistic (linear kinetic term)
-ComplexMatrix calc_kinetic_matrix_component_linear_momentum(MomentumOperator &p, RankZeroOperator &V, OrbitalVector &bra, OrbitalVector &ket);
+// //X2C/DIRAC spinorial relativistic (linear kinetic term)
+// ComplexMatrix calc_kinetic_matrix_component_linear_momentum(MomentumOperator &p, RankZeroOperator &V, OrbitalVector &bra, OrbitalVector &ket);
 //scalar relativistic
 ComplexMatrix calc_kinetic_matrix_component_symmetrized(int d, MomentumOperator &p, RankZeroOperator &V, OrbitalVector &bra, OrbitalVector &ket, bool spinorial = false);
 } // namespace qmoperator
@@ -69,7 +70,7 @@ double qmoperator::calc_kinetic_trace(MomentumOperator &p, OrbitalVector &Phi) {
     return 0.5 * eta.dot(norms);
 }
 
-/** @brief Compute the trace over the Hilbert space (not the spin space) of the kinetic matrix 
+/** @brief Compute the trace over the Fock space (not the spin space) of the kinetic matrix 
  * 
  */
 ComplexDouble qmoperator::calc_kinetic_trace(MomentumOperator &p, RankZeroOperator &V, OrbitalVector &Phi, bool spinorial) {
@@ -292,11 +293,43 @@ ComplexMatrix qmoperator::calc_kinetic_matrix_component( MomentumOperator &p, Ra
     return 0.5 * T;
 }
 
+
+/** @brief X2C spinorial computation of the kinetic matrix trace
+* The directions can no longer be computed seperately, due to the kinetic operator becoming σ·p
+* Dirac version is unimplemented, it just kinda look like the Dirac Hamiltonian thanks to the linear dependence on p of the kinetic term
+*/
+ComplexDouble qmoperator::calc_kinetic_trace_linear_momentum( MomentumOperator &p, ASCOperator &X, OrbitalVector &Phi) {
+    Timer timer;
+    int N = Phi.size();
+
+    int nNodes = 0, sNodes = 0;
+    //first c(σ·p)|ket>  - Note: the multiplication by c is handled outside this function, rather than adding arguments to the 
+    OrbitalVector dPhi_x = p[0](Phi, 1); //(σ_x·p_x)|Phi>
+    OrbitalVector dPhi_y = p[1](Phi, 2); //(σ_y·p_y)|Phi>
+    OrbitalVector dPhi_z = p[2](Phi, 3); //(σ_z·p_z)|Phi>
+    //summing it all together
+    OrbitalVector dPhi_tmp = orbital::add({1.0,0.0}, dPhi_x, {1.0,0.0}, dPhi_y);//intermediate sum
+    OrbitalVector dPhi = orbital::add({1.0,0.0}, dPhi_tmp, {1.0,0.0}, dPhi_z);
+    // for (int i=0; i<Phi.size(); i++) {
+    //     if (!mrcpp::mpi::my_func(i)) continue;
+    //     for (int comp=0; comp<Phi[i].Ncomp(); comp++) Phi[i].func_ptr->data.c1[comp] *= c;
+    // }
+
+    nNodes += orbital::get_n_nodes(dPhi);
+    sNodes += orbital::get_size_nodes(dPhi);
+    // ComplexDouble T = (X.trace(dPhi, Phi) + X.trace(Phi, dPhi)); //Kinetic operator is c(σ·p)V (with V being NOT the potential operator here)
+    ComplexDouble T = X.trace(dPhi, Phi); //Kinetic operator is c(σ·p)V (with V being NOT the potential operator here)
+    T += std::conj(T); //test debug energy
+
+    mrcpp::print::tree(2, "<i|sigma p kappa sigma p|j>", nNodes, sNodes, timer.elapsed());
+    return 0.5 * T;
+}
+
 /** @brief X2C/Dirac spinorial computation of the kinetic matrix 
 * The directions can no longer be computed seperately, due to the kinetic operator becoming σ·p
 * Dirac version is unimplemented, it just kinda look like the Dirac Hamiltonian thanks to the linear dependence on p of the kinetic term
 */
-ComplexMatrix qmoperator::calc_kinetic_matrix_component_linear_momentum( MomentumOperator &p, RankZeroOperator &X, OrbitalVector &bra, OrbitalVector &ket) {
+ComplexMatrix qmoperator::calc_kinetic_matrix_linear_momentum( MomentumOperator &p, ASCOperator &X, OrbitalVector &bra, OrbitalVector &ket) {
     Timer timer;
     int Ni = bra.size();
     int Nj = ket.size();
@@ -319,7 +352,7 @@ ComplexMatrix qmoperator::calc_kinetic_matrix_component_linear_momentum( Momentu
 
         nNodes += orbital::get_n_nodes(dKet);
         sNodes += orbital::get_size_nodes(dKet);
-        T = X(dKet, ket); //Kinetic operator is c(σ·p)V (with V being NOT the potential operator here)
+        T = X(dKet, ket) + X(ket, dKet); //Kinetic operator is c(σ·p)V (with V being NOT the potential operator here)
         
     } else {
         OrbitalVector dBra_x = p[0](bra, 1); //<bra|(σ_x·p_x)
@@ -329,18 +362,18 @@ ComplexMatrix qmoperator::calc_kinetic_matrix_component_linear_momentum( Momentu
         OrbitalVector dBra_tmp = orbital::add({1.0,0.0}, dBra_x, {1.0,0.0}, dBra_y);//intermediate sum
         OrbitalVector dBra = orbital::add({1.0,0.0}, dBra_tmp, {1.0,0.0}, dBra_z);
 
-        // OrbitalVector dKet_x = p[0](ket, 1); //(σ_x·p_x)|ket>
-        // OrbitalVector dKet_y = p[1](ket, 2); //(σ_y·p_y)|ket>
-        // OrbitalVector dKet_z = p[2](ket, 3); //(σ_z·p_z)|ket>
-        // //summing it all together
-        // OrbitalVector dKet_tmp = orbital::add({1.0,0.0}, dKet_x, {1.0,0.0}, dKet_y);//intermediate sum
-        // OrbitalVector dKet = orbital::add({1.0,0.0}, dKet_tmp, {1.0,0.0}, dKet_z);
+        OrbitalVector dKet_x = p[0](ket, 1); //(σ_x·p_x)|ket>
+        OrbitalVector dKet_y = p[1](ket, 2); //(σ_y·p_y)|ket>
+        OrbitalVector dKet_z = p[2](ket, 3); //(σ_z·p_z)|ket>
+        //summing it all together
+        OrbitalVector dKet_tmp = orbital::add({1.0,0.0}, dKet_x, {1.0,0.0}, dKet_y);//intermediate sum
+        OrbitalVector dKet = orbital::add({1.0,0.0}, dKet_tmp, {1.0,0.0}, dKet_z);
 
         nNodes += orbital::get_n_nodes(dBra);
         // nNodes += orbital::get_n_nodes(dKet);
         sNodes += orbital::get_size_nodes(dBra);
         // sNodes += orbital::get_size_nodes(dKet);
-        T = X(dBra, ket);
+        T = X(dBra, ket) + (X(dKet, bra)).adjoint();
     }
     mrcpp::print::tree(2, "<i|sigma p kappa sigma p|j>", nNodes, sNodes, timer.elapsed());
     return 0.5 * T;

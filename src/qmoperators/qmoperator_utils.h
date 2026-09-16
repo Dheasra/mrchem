@@ -28,16 +28,22 @@
 #include "mrchem.h"
 #include "qmfunctions/qmfunction_fwd.h"
 #include "tensor/tensor_fwd.h"
+#include "qmoperators/one_electron/ASCOperator.h"
 
 namespace mrchem {
 class MomentumOperator;
 
 namespace qmoperator {
+//Non-relativistic
 double calc_kinetic_trace(MomentumOperator &p, OrbitalVector &Phi);
-ComplexDouble calc_kinetic_trace(MomentumOperator &p, RankZeroOperator &V, OrbitalVector &Phi, bool spinorial = false);
 ComplexMatrix calc_kinetic_matrix(MomentumOperator &p, OrbitalVector &bra, OrbitalVector &ket);
+//ZORA relativistic
+ComplexDouble calc_kinetic_trace(MomentumOperator &p, RankZeroOperator &V, OrbitalVector &Phi, bool spinorial = false);
 ComplexMatrix calc_kinetic_matrix(MomentumOperator &p, RankZeroOperator &V, OrbitalVector &bra, OrbitalVector &ket, bool spinorial = false);
 ComplexMatrix calc_kinetic_matrix_symmetrized(MomentumOperator &p, RankZeroOperator &V, OrbitalVector &bra, OrbitalVector &ket, bool spinorial = false);
+//X2C/DIRAC spinorial relativistic (linear kinetic term)
+ComplexDouble calc_kinetic_trace_linear_momentum(MomentumOperator &p, ASCOperator &X, OrbitalVector &Phi);
+ComplexMatrix calc_kinetic_matrix_linear_momentum(MomentumOperator &p, ASCOperator &X, OrbitalVector &bra, OrbitalVector &ket);
 } // namespace qmoperator
 
 } // namespace mrchem

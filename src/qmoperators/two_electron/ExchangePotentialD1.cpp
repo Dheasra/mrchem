@@ -411,10 +411,10 @@ void ExchangePotentialD1::setupInternal(double prec) {
  * The exchange potential is computed and applied on the fly to the given orbital.
  * The orbitals must have been previously stored in bank.
  */
-Orbital ExchangePotentialD1::calcExchange(Orbital phi_p) { //this needs to be updated to multicomp
+Orbital ExchangePotentialD1::calcExchange(Orbital phi_p) {
     Timer timer;
     OrbitalVector &Phi = *this->orbitals;
-    // MSG_INFO("spouet");
+    MSG_INFO("spouet");
 
     double prec = this->apply_prec;
     // use fixed exchange_prec if set explicitly, otherwise use setup prec
@@ -428,9 +428,10 @@ Orbital ExchangePotentialD1::calcExchange(Orbital phi_p) { //this needs to be up
         Orbital phi_i(Phi[i]);
         if (not mrcpp::mpi::my_func(i)) PhiBank.get_func(i, phi_i, 1);
 
+        MSG_INFO("pondering orb="<< i);
         double spin_fac = phi_i.occ() * getSpinFactor(phi_i, phi_p);
         if (std::abs(spin_fac) >= mrcpp::MachineZero) {
-            // MSG_INFO("Orb nbr="<< i << " spin factor="<<spin_fac);
+            MSG_INFO("Orb nbr="<< i << " spin factor="<<spin_fac);
             Orbital ex_iip = phi_p.paramCopy(true);
             calcExchange_kij(precf, phi_i, phi_i, phi_p, ex_iip);
             coef_vec.push_back(spin_fac / phi_i.getSquareNorm());

@@ -64,15 +64,18 @@ public:
                 double proj_prec,
                 double screen = -1.0,
                 double coeff_thrs = mrcpp::MachineZero);
+    
+    ASCOperator(const Nuclei &nucs, const std::vector<std::string> &large_tree_paths, const std::vector<std::string> &small_tree_paths, double proj_prec, double screen = -1.0, double coeff_thrs = mrcpp::MachineZero);
+
 
     //Getters
     std::shared_ptr<mrcpp::CompFunctionVector> &getLargeComponents() { return this->large; }
     std::shared_ptr<mrcpp::CompFunctionVector> &getSmallComponents() { return this->small; }
 
     //operators override
-    OrbitalVector operator()(OrbitalVector &inp, int alpha = 0); 
+    OrbitalVector operator()(OrbitalVector &inp); 
     ComplexMatrix operator()(OrbitalVector &bra, OrbitalVector &ket);
-    ComplexDouble trace(OrbitalVector &Phi);
+    ComplexDouble trace(OrbitalVector &bra, OrbitalVector &ket);
 private:
     std::shared_ptr<mrcpp::CompFunctionVector> large{nullptr}; ///< N_ao spinors, comp[0]=alpha, comp[1]=beta
     std::shared_ptr<mrcpp::CompFunctionVector> small{nullptr}; ///< N_ao spinors, comp[0]=alpha, comp[1]=beta

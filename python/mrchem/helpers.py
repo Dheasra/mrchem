@@ -78,13 +78,16 @@ def write_scf_fock(user_dict, wf_dict, origin):
                 "include_nuclear": False,
                 "include_coulomb": False,
                 "include_xc": False,
-                "isAZORA": False
+                "isAZORA": False,
+                "azora_potential_path": user_dict["ZORA"]["azora_potential_path"]
             }
             fock_dict["asc_operator"] = {
                             "isASC": True
                         }
             if user_dict["ASC"]["bas_dir_path"].lower() != "none":
                 fock_dict["asc_operator"]["bas_dir_path"] = user_dict["ASC"]["bas_dir_path"]
+            if user_dict["ASC"]["coeff_dir_path"].lower() != "none":
+                fock_dict["asc_operator"]["coeff_dir_path"] = user_dict["ASC"]["coeff_dir_path"]
 
     # Kinetic
     fock_dict["kinetic_operator"] = {"derivative": user_dict["Derivatives"]["kinetic"]}
@@ -800,6 +803,14 @@ def parse_wf_method(user_dict):
         #     raise RuntimeError(
         #         "ZORA (V_xc) not available for unrestricted wavefunctions"
         #     )
+    if user_dict["WaveFunction"]["relativity"].lower() in ["asc"]:
+        relativity_name = "Atomic Small Component"
+        user_dict["WaveFunction"]["relativity"] = "asc"
+        user_dict["ZORA"]["include_nuclear"] = False
+        user_dict["ZORA"]["include_coulomb"] = False
+        user_dict["ZORA"]["include_xc"] = False
+        user_dict["ZORA"]["isAZORA"] = False
+        user_dict["ASC"]["isASC"] = True
 
     # Determine environment name label for print outs to the output file
     environment_name = "None"

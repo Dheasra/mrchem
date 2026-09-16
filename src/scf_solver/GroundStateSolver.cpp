@@ -303,7 +303,13 @@ json GroundStateSolver::optimize(Molecule &mol, FockBuilder &F) {
         Psi.clear();
         F.clear();
         // Orthonormalize
-        orbital::orthonormalize(orb_prec, Phi_np1, F_mat); //TODO: maybe add a path to enforce Kramers symmetry when restricted and 2c
+        if (F.isX2C()){ //maybe this could be done more elegantly, but for now it is how it is
+            auto asc = std::dynamic_pointer_cast<ASCOperator>(F.getCouplingOperator());
+            if (!asc) MSG_ABORT("isX2C() true but chi is not an ASCOperator");
+            orbital::orthonormalize_ASC(orb_prec, Phi_np1, F_mat, *asc);
+        } else {
+            orbital::orthonormalize(orb_prec, Phi_np1, F_mat); //TODO: maybe add a path to enforce Kramers symmetry when restricted and 2c
+        }
 
         // Compute orbital updates
         OrbitalVector dPhi_n = orbital::add(1.0, Phi_np1, -1.0, Phi_n);

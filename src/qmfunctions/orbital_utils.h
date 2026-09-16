@@ -29,6 +29,8 @@
 #include "qmfunction_fwd.h"
 #include <MRCPP/utils/CompFunction.h>
 
+#include "qmoperators/one_electron/ASCOperator.h"
+
 namespace mrchem {
 namespace orbital {
 
@@ -64,6 +66,7 @@ ComplexMatrix calc_overlap_matrix(OrbitalVector &Bra, OrbitalVector &Ket);
 ComplexMatrix localize(double prec, OrbitalVector &Phi, ComplexMatrix &F);
 ComplexMatrix diagonalize(double prec, OrbitalVector &Phi, ComplexMatrix &F);
 ComplexMatrix orthonormalize(double prec, OrbitalVector &Phi, ComplexMatrix &F);
+ComplexMatrix orthonormalize_ASC(double prec, OrbitalVector &Phi_L, ComplexMatrix &F, ASCOperator &X);
 ComplexMatrix kramers_orthonormalize(double prec, OrbitalVector &Phi, ComplexMatrix &F);
 
 int size_empty(const OrbitalVector &Phi);

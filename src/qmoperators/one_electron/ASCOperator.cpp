@@ -125,7 +125,8 @@ void add_atom_spinors(gto_utils::Intgrl &intgrl, const std::string &coef_file, d
     int nAO = ao_exp.size();
 
     ComplexMatrix C = math_utils::read_matrix_file_cplx(coef_file);
-    if (C.rows() != 2 * nAO || C.cols() != nAO) MSG_ABORT("Coupling coefficient matrix must be (2*N_ao x N_ao)");
+    MSG_INFO("C(0,0) for " << coef_file << " = " << C(0,0)); 
+    if (C.rows() != 2 * nAO || C.cols() != nAO) MSG_ABORT("Coupling coefficient matrix must be (2*" << nAO <<" x " << nAO <<"), current format= (" << C.rows()<< " x "<< C.cols()<<")");
 
     int offset = ao_real.size();
     for (int j = 0; j < nAO; j++) {
@@ -136,6 +137,7 @@ void add_atom_spinors(gto_utils::Intgrl &intgrl, const std::string &coef_file, d
         mrcpp::project(proj_prec, ao.real(), ao_j);
         ao_real.push_back(ao);
     }
+    MSG_INFO("ao_real[0] norm = " << ao_real[offset].real().getSquareNorm());
 
     for (int i = 0; i < nAO; i++) {
         mrcpp::CompFunction<3> spinor(0, false, 2);
@@ -156,9 +158,18 @@ void add_atom_spinors(gto_utils::Intgrl &intgrl, const std::string &coef_file, d
                 continue;
             }
             mrcpp::CompFunction<3> psi_c;
+            MSG_INFO("i=" << i << " c=" << c << " coefs.size()=" << coefs.size() << " terms.size()=" << terms.size());
             mrcpp::linear_combination(psi_c, coefs, terms, proj_prec);
+            MSG_INFO("psi_c norm after linear_combination = " << psi_c.norm());  // or getSquareNorm() on whichever component is populated
+            if (psi_c.isreal()) {
+                psi_c.CompC[0]= psi_c.CompD[0]->CopyTreeToComplex();
+                delete psi_c.CompD[0];
+                psi_c.CompD[0] = nullptr;
+            }
             spinor.setCplx(psi_c.CompC[0], c);
+            MSG_INFO("sssspinor norm after linear_combination = " << spinor.norm());  // or getSquareNorm() on whichever component is populated
             psi_c.CompC[0] = nullptr; // ownership transferred to spinor, avoid double free
+            spinor.calcSquareNorm();
         }
         spinors.push_back(spinor);
     }
@@ -169,6 +180,7 @@ std::shared_ptr<mrcpp::CompFunctionVector> project_large_spinor_set(const Nuclei
     if (static_cast<int>(bas_files.size()) != nAtoms || static_cast<int>(coef_files.size()) != nAtoms)
         MSG_ABORT("Need exactly one large-component basis file and one coefficient file per atom");
 
+    MSG_INFO("BIG AS AN ORC: "<< coef_files[0] );
     std::vector<mrcpp::CompFunction<3>> ao_real;
     auto spinors = std::make_shared<mrcpp::CompFunctionVector>(0);
     for (int k = 0; k < nAtoms; k++) {
@@ -187,6 +199,7 @@ std::shared_ptr<mrcpp::CompFunctionVector> project_small_spinor_set(const Nuclei
     if (static_cast<int>(large_bas_files.size()) != nAtoms || static_cast<int>(coef_files.size()) != nAtoms)
         MSG_ABORT("Need exactly one large-component basis file and one small-component coefficient file per atom");
 
+    MSG_INFO("Smol");
     std::vector<mrcpp::CompFunction<3>> ao_real;
     auto spinors = std::make_shared<mrcpp::CompFunctionVector>(0);
     for (int k = 0; k < nAtoms; k++) {
@@ -199,26 +212,94 @@ std::shared_ptr<mrcpp::CompFunctionVector> project_small_spinor_set(const Nuclei
     return spinors;
 }
 
+ASCOperator::ASCOperator(const Nuclei &nucs, const std::vector<std::string> &large_tree_paths, const std::vector<std::string> &small_tree_paths, double proj_prec, double screen, double coeff_thrs) {
+    // Timer timer;
+    
+    auto spinors = std::make_shared<mrcpp::CompFunctionVector>(0);
+    this->large = std::make_shared<mrcpp::CompFunctionVector>(0);
+    this->small = std::make_shared<mrcpp::CompFunctionVector>(0);
+    std::vector<ComplexDouble> imag1(2);
+    imag1[0] = {1.0, 0.0};
+    imag1[1] = {0.0, 1.0}; //{{1.0,0.0}, {0.0, 1.0}}; //1, i
+    for (int i=0; i<large_tree_paths.size(); i++) {
+        // std::string nuc_sym = nucs[0].getSymbol();
+        std::vector<mrcpp::CompFunction<3>> large_comps(0);
+        mrcpp::CompFunction<3> large_real;
+        large_real.defreal();
+        large_real.alloc(2, true);
+        large_real.CompD[0]->loadTree(large_tree_paths[i]+"_Large_alpha_real");
+        MSG_INFO("a "<< large_real.CompD[0]->getNNodes());
+        large_real.CompD[1]->loadTree(large_tree_paths[i]+"_Large_beta_real");
+        MSG_INFO("a1 "<< (large_real.CompD[1]->getNNodes()));
+        // large_alpha_real.CompD[0]
+        large_comps.push_back(large_real);
 
-// } // namespace
+        MSG_INFO("b");
+        mrcpp::CompFunction<3> large_imag;
+        large_imag.defreal();
+        large_imag.alloc(2, true);
+        large_imag.CompD[0]->loadTree(large_tree_paths[i]+"_Large_alpha_imag");
+        large_imag.CompD[1]->loadTree(large_tree_paths[i]+"_Large_beta_imag");
+        large_comps.push_back(large_imag);
+        mrcpp::CompFunction<3> large_tmp;
+        large_tmp.defcomplex();
+        large_tmp.alloc(2, true);
+        mrcpp::linear_combination(large_tmp, imag1, large_comps, proj_prec, false);
+
+        std::vector<mrcpp::CompFunction<3>> small_comps(0);
+        MSG_INFO("c");
+        this->large->push_back(large_tmp);
+        MSG_INFO("d large ok");
+        mrcpp::CompFunction<3> small_real;
+        small_real.defreal();
+        small_real.alloc(2, true);
+        small_real.CompD[0]->loadTree(small_tree_paths[i]+"_small_alpha_real");
+        small_real.CompD[1]->loadTree(small_tree_paths[i]+"_small_beta_real");
+        small_comps.push_back(small_real);
+        // small_alpha_real.CompD[0]
+        MSG_INFO("e");
+        mrcpp::CompFunction<3> small_imag;
+        small_imag.defreal();
+        small_imag.alloc(2, true);
+        small_imag.CompD[0]->loadTree(small_tree_paths[i]+"_small_alpha_imag");
+        small_imag.CompD[1]->loadTree(small_tree_paths[i]+"_small_beta_imag");
+        small_comps.push_back(small_imag);
+        mrcpp::CompFunction<3> small_tmp;
+        MSG_INFO("f");
+        small_tmp.defcomplex();
+        small_tmp.alloc(2, true);
+        mrcpp::linear_combination(small_tmp, imag1, small_comps, proj_prec,false);
+        this->small->push_back(small_tmp);
+        MSG_INFO("g end");
+    }
+    // mrcpp::print::time(2, "Gaussian coupling operator (large component, N=" + std::to_string(this->large->size()) + ")", timer);
+    // mrcpp::print::time(2, "Gaussian coupling operator (small component, N=" + std::to_string(this->small->size()) + ")", timer);
+}
+
 
 ASCOperator::ASCOperator(const Nuclei &nucs, const std::vector<std::string> &large_bas_files, const std::vector<std::string> &large_coef_files, const std::vector<std::string> &small_coef_files, double proj_prec, double screen, double coeff_thrs) {
     Timer timer;
     this->large = project_large_spinor_set(nucs, large_bas_files, large_coef_files, proj_prec, screen, coeff_thrs);
+    MSG_INFO("work ya git: large 0 path="<< large_coef_files[0]);
     this->small = project_small_spinor_set(nucs, large_bas_files, small_coef_files, proj_prec, screen, coeff_thrs);
     mrcpp::print::time(2, "Gaussian coupling operator (large component, N=" + std::to_string(this->large->size()) + ")", timer);
     mrcpp::print::time(2, "Gaussian coupling operator (small component, N=" + std::to_string(this->small->size()) + ")", timer);
 }
 
-OrbitalVector ASCOperator::operator()(OrbitalVector &inp, int alpha) {
+OrbitalVector ASCOperator::operator()(OrbitalVector &inp) {
     // <phi^L_i|ket> matrix
     ComplexMatrix matrix_Lket = mrcpp::calc_overlap_matrix(*(this->large), inp); //N_AO x N matrix
-    OrbitalVector out(inp.size());
+    OrbitalVector out(0);
     for (int i=0; i<inp.size(); i++) {
         if (!mrcpp::mpi::my_func(i)) continue;
         auto row_Lket = matrix_Lket.row(i); //not an std::vector<ComplexDouble>, is some Eigen block instead, need to transmute
         std::vector<ComplexDouble> vec_Lket(row_Lket.begin(), row_Lket.end()); //transmuting the block to the needed type
-        mrcpp::linear_combination(out[i], vec_Lket, *(this->small),-1.0, false);
+        Orbital out_tmp (inp[i].getFuncData());
+        mrcpp::linear_combination(out_tmp, vec_Lket, *(this->small),-1.0, false);
+        MSG_INFO("aaaaaaaaaaa" << out_tmp.spin() << " inp_spin=" << inp[0].spin());
+        out_tmp.func_ptr->data = inp[i].func_ptr->data;
+        MSG_INFO("bbbbbbbbbbb" << out_tmp.spin() << " inp_spin=" << inp[0].spin());
+        out.push_back(out_tmp);
     }
     return out;
 }
@@ -237,19 +318,29 @@ ComplexMatrix ASCOperator::operator()(OrbitalVector &bra, OrbitalVector &ket) {
     ComplexMatrix left_matrix = mrcpp::calc_overlap_matrix(bra, *(this->small)); //N x N_AO matrix
     //<phi^L_i|ket>
     ComplexMatrix right_matrix = mrcpp::calc_overlap_matrix(*(this->large), ket); //N_AO x N matrix
+
+    // MSG_INFO("left_mat= "<< left_matrix);
+    // MSG_INFO("right_mat= "<< right_matrix);
+
+    // ComplexMatrix left_matrix_debug = mrcpp::calc_overlap_matrix( *(this->small), *(this->small)); //N x N_AO matrix
+    // //<phi^L_i|ket>
+    // ComplexMatrix right_matrix_debug = mrcpp::calc_overlap_matrix(*(this->large), *(this->large)); //N_AO x N matrix
+    // MSG_INFO("left_mat= "<< left_matrix_debug);
+    // MSG_INFO("right_mat= "<< right_matrix_debug);
+
     std::stringstream o_name;
     o_name << "<i|" << this->name() << "|j>";
     // mrcpp::print::tree(2, o_name.str(), orbital::get_n_nodes(Oket), orbital::get_size_nodes(Oket), t1.elapsed());
     return left_matrix*right_matrix;
 }
 
-ComplexDouble ASCOperator::trace(OrbitalVector &Phi) {
+ComplexDouble ASCOperator::trace(OrbitalVector &bra, OrbitalVector &ket) {
     Timer t1;
     //NOTE: there might be a super smart way of avoiding to compute the full matrices but I don't see it right now
     //<bra|phi^S_i>
-    ComplexMatrix left_matrix = mrcpp::calc_overlap_matrix(Phi, *(this->small)); //N x N_AO matrix
+    ComplexMatrix left_matrix = mrcpp::calc_overlap_matrix(bra, *(this->small)); //N x N_AO matrix
     //<phi^L_i|ket>
-    ComplexMatrix right_matrix = mrcpp::calc_overlap_matrix(*(this->large), Phi); //N_AO x N matrix
+    ComplexMatrix right_matrix = mrcpp::calc_overlap_matrix(*(this->large), ket); //N_AO x N matrix
 
     //Compute the trace
     ComplexDouble out = (left_matrix.array() * right_matrix.transpose().array()).sum();
