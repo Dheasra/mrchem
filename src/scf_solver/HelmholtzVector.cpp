@@ -48,12 +48,16 @@ extern mrcpp::MultiResolutionAnalysis<3> *MRA; // Global MRA
  * operators are constructed at this point, they are produced on-the-fly in
  * the application.
  */
-HelmholtzVector::HelmholtzVector(double pr, const DoubleVector &l, double c)
+HelmholtzVector::HelmholtzVector(double pr, const DoubleVector &l, double c, int rel)
         : prec(pr) {
     this->lambda = l;
     this->c = c;
     for (int i = 0; i < this->lambda.size(); i++) {
-        if (this->lambda(i) > 0.0) this->lambda(i) = -0.5;
+        if (this->lambda(i) > 0.0 and !rel) {
+            this->lambda(i) = -0.5;
+        } else if (this->lambda(i) > c*c and rel) { //4C / X2C case
+            this->lambda(i) = c*c-0.5;
+        }
     }
 }
 
@@ -142,7 +146,8 @@ OrbitalVector HelmholtzVector::apply(RankZeroOperator &V, OrbitalVector &Phi, Or
 Orbital HelmholtzVector::apply(int i, const Orbital &phi, int rel) const {
     ComplexDouble mu_i;
     if (rel) { // Dirac propagator argument
-        mu_i = std::sqrt(this->c*this->c - (this->lambda(i)*this->lambda(i))/(this->c*this->c));
+        MSG_INFO("helmholtz parameter=" << this->lambda(i));
+        mu_i = std::sqrt(this->c*this->c - ((this->lambda(i))*(this->lambda(i)))/(this->c*this->c));
     } else {
         mu_i = std::sqrt(-2.0 * this->lambda(i));
     }

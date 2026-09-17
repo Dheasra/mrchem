@@ -296,12 +296,20 @@ json GroundStateSolver::optimize(Molecule &mol, FockBuilder &F) {
         // Init Helmholtz operator
         // DoubleVector helmholtzParameters = F_mat.real().diagonal(); 
         int apply_dirac_prop = 0;
+        // double c = F.getLightSpeed();
         if (F.isX2C()) {
             apply_dirac_prop = 1;
+            MSG_INFO("Diagonal Fock="<< F_mat.real().diagonal());
+            // for (int i=0; i<Phi_n.size(); i++) {
+            //     helmholtzParameters[i] -= c*c;
+            // }
+            // MSG_INFO("rescaled Diagonal Fock="<< helmholtzParameters);
         }
-        HelmholtzVector H(helm_prec, F_mat.real().diagonal(), F.getLightSpeed());
+        HelmholtzVector H(helm_prec, F_mat.real().diagonal(), F.getLightSpeed(), apply_dirac_prop);
         ComplexMatrix L_mat = H.getLambdaMatrix();
         
+        MSG_INFO("F_mat-L_mat" << F_mat - L_mat);
+
         // Apply Helmholtz operator
         OrbitalVector Psi = F.buildHelmholtzArgument(orb_prec, Phi_n, F_mat, L_mat);
         OrbitalVector Phi_np1 = H(Psi, apply_dirac_prop);

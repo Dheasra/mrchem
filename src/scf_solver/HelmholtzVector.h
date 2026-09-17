@@ -41,7 +41,7 @@ namespace mrchem {
 
 class HelmholtzVector final {
 public:
-    HelmholtzVector(double pr, const DoubleVector &l, double c = 0.0);
+    HelmholtzVector(double pr, const DoubleVector &l, double c = 0.0, int rel = 0);
 
     DoubleMatrix getLambdaMatrix() const { return this->lambda.asDiagonal(); }
 

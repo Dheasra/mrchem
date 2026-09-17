@@ -180,7 +180,6 @@ std::shared_ptr<mrcpp::CompFunctionVector> project_large_spinor_set(const Nuclei
     if (static_cast<int>(bas_files.size()) != nAtoms || static_cast<int>(coef_files.size()) != nAtoms)
         MSG_ABORT("Need exactly one large-component basis file and one coefficient file per atom");
 
-    MSG_INFO("BIG AS AN ORC: "<< coef_files[0] );
     std::vector<mrcpp::CompFunction<3>> ao_real;
     auto spinors = std::make_shared<mrcpp::CompFunctionVector>(0);
     for (int k = 0; k < nAtoms; k++) {
@@ -199,7 +198,6 @@ std::shared_ptr<mrcpp::CompFunctionVector> project_small_spinor_set(const Nuclei
     if (static_cast<int>(large_bas_files.size()) != nAtoms || static_cast<int>(coef_files.size()) != nAtoms)
         MSG_ABORT("Need exactly one large-component basis file and one small-component coefficient file per atom");
 
-    MSG_INFO("Smol");
     std::vector<mrcpp::CompFunction<3>> ao_real;
     auto spinors = std::make_shared<mrcpp::CompFunctionVector>(0);
     for (int k = 0; k < nAtoms; k++) {
@@ -278,7 +276,7 @@ ASCOperator::ASCOperator(const Nuclei &nucs, const std::vector<std::string> &lar
     ComplexMatrix SL = mrcpp::calc_overlap_matrix(*(this->large));
     ComplexMatrix U = math_utils::hermitian_matrix_pow(SL, -1.0);
     mrcpp::rotate(*(this->large), U, proj_prec);
-    
+
     // mrcpp::print::time(2, "Gaussian coupling operator (large component, N=" + std::to_string(this->large->size()) + ")", timer);
     // mrcpp::print::time(2, "Gaussian coupling operator (small component, N=" + std::to_string(this->small->size()) + ")", timer);
 }
@@ -287,7 +285,6 @@ ASCOperator::ASCOperator(const Nuclei &nucs, const std::vector<std::string> &lar
 ASCOperator::ASCOperator(const Nuclei &nucs, const std::vector<std::string> &large_bas_files, const std::vector<std::string> &large_coef_files, const std::vector<std::string> &small_coef_files, double proj_prec, double screen, double coeff_thrs) {
     Timer timer;
     this->large = project_large_spinor_set(nucs, large_bas_files, large_coef_files, proj_prec, screen, coeff_thrs);
-    MSG_INFO("work ya git: large 0 path="<< large_coef_files[0]);
     this->small = project_small_spinor_set(nucs, large_bas_files, small_coef_files, proj_prec, screen, coeff_thrs);
 
     //orthogonalising the large component between themselves
@@ -305,14 +302,11 @@ OrbitalVector ASCOperator::operator()(OrbitalVector &inp) {
     OrbitalVector out(0);
     for (int i=0; i<inp.size(); i++) {
         if (!mrcpp::mpi::my_func(i)) continue;
-        auto row_Lket = matrix_Lket.row(i); //not an std::vector<ComplexDouble>, is some Eigen block instead, need to transmute
-        std::vector<ComplexDouble> vec_Lket(row_Lket.begin(), row_Lket.end()); //transmuting the block to the needed type
+        auto col_Lket = matrix_Lket.col(i); //not an std::vector<ComplexDouble>, is some Eigen block instead, need to transmute
+        std::vector<ComplexDouble> vec_Lket(col_Lket.begin(), col_Lket.end()); //transmuting the block to the needed type
         Orbital out_tmp (inp[i].getFuncData());
         mrcpp::linear_combination(out_tmp, vec_Lket, *(this->small),-1.0, false);
-        MSG_INFO("aaaaaaaaaaa" << out_tmp.spin() << " inp_spin=" << inp[0].spin()); 
-        // out_tmp.func_ptr->data = inp[i].func_ptr->data;
         out_tmp.func_ptr->data.n1[0] = inp[i].func_ptr->data.n1[0]; //transmitting the spin to out_tmp
-        MSG_INFO("bbbbbbbbbbb" << out_tmp.spin() << " inp_spin=" << inp[0].spin());
         out.push_back(out_tmp);
     }
     return out;

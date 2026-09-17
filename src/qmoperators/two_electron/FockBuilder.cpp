@@ -656,13 +656,13 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
     for (int i = 0; i < Phi.size(); i++) {
         if (!mrcpp::mpi::my_func(i)) continue;
         // apply (σ_d p_d) to |VRψ> 
-        std::vector<Orbital> nabla_Phi = p(Phi[i], true); //true == apply Pauli matrices
+        std::vector<Orbital> nabla_Phi = p(termTwo[i], true); //true == apply Pauli matrices
         //sum it up (for the dot product)
         termTwo[i].add({1.0, 0.0}, nabla_Phi[0]);
         termTwo[i].add({1.0, 0.0}, nabla_Phi[1]);
         termTwo[i].add({1.0, 0.0}, nabla_Phi[2]);
         // multiply by c
-        for (int comp=0; comp<Ncomponents; comp++) termTwo[i].func_ptr->data.c1[comp] *= (0.5/c); //0.5 because the HelmholtzOperator applies -2*G, and the Dirac propagator trick creates only -G
+        for (int comp=0; comp<Ncomponents; comp++) termTwo[i].func_ptr->data.c1[comp] *= -(0.5/c); //0.5 because the HelmholtzOperator applies -2*G, and the Dirac propagator trick creates only -G
         // Free memory space by discarding no longer relevant trees. Should help mitigate the memory usage spike from this function
         for (int dim=0; dim<3; dim++) nabla_Phi[dim].free();
     }
@@ -671,7 +671,7 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
     for (int i = 0; i < Phi.size(); i++) {
         if (!mrcpp::mpi::my_func(i)) continue;
         for (int comp=0; comp<Ncomponents; comp++) 
-            termOne[i].func_ptr->data.c1[comp] *= (0.5 + eps[i]/(two_cc)); //0.5 because the HelmholtzOperator applies -2*G, and the Dirac propagator trick creates only -G
+            termOne[i].func_ptr->data.c1[comp] *= -(0.5 + eps[i]/(two_cc)); //0.5 because the HelmholtzOperator applies -2*G, and the Dirac propagator trick creates only -G
     }
     // Add up all the terms to form the inhomogeneous part of the Helmholtz equation
     Timer t_add;
