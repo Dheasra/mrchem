@@ -279,9 +279,9 @@ SCFEnergy FockBuilder::trace(OrbitalVector &Phi, const Nuclei &nucs) {
         double S_S_trace = mrcpp::calc_overlap_matrix(Xphi).real().trace(); //a bit wasteful to compute the full matrix, but space efficient here.
         E_mc2 += (-c)*c*S_S_trace; //small component mass contribution
 
-        if (this->nuc != nullptr) { E_en = this->nuc->trace(Xphi).real(); }
-        if (this->coul != nullptr) E_ee = 0.5 * this->coul->trace(Xphi).real();
-        if (this->ex != nullptr) E_x = -this->exact_exchange * this->ex->trace(Xphi).real();
+        if (this->nuc != nullptr) { E_en += this->nuc->trace(Xphi).real(); }
+        if (this->coul != nullptr) E_ee += 0.5 * this->coul->trace(Xphi).real();
+        if (this->ex != nullptr) E_x += -this->exact_exchange * this->ex->trace(Xphi).real();
         if (this->xc != nullptr) MSG_WARN("X2C not implemented for DFT");
         // if (this->xc != nullptr) E_xc = this->xc->getEnergy();
     }
