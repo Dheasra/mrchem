@@ -208,6 +208,7 @@ SCFEnergy FockBuilder::trace(OrbitalVector &Phi, const Nuclei &nucs) {
     double Er_el = 0.0;  // Electronic reaction energy
     double Er_tot = 0.0; // Total reaction energy
     double E_nl = 0.0;   // Non-local pseudopotential energy
+    double E_mc2 = 0.0;  // Energy mass contribution/ Energy gauge contribution
 
     // Nuclear part
     if (this->nuc != nullptr) E_nn = chemistry::compute_nuclear_repulsion(nucs);
@@ -267,10 +268,28 @@ SCFEnergy FockBuilder::trace(OrbitalVector &Phi, const Nuclei &nucs) {
         E_nl = this->pp_projector->trace(Phi).real();
     }
 
+    //X2C contributions to electronic part
+    if (isX2C()) {
+        double c = getLightSpeed();
+        double S_L_trace = mrcpp::calc_overlap_matrix(Phi).real().trace(); //a bit wasteful to compute the full matrix, but space efficient here.
+        E_mc2 += c*c*S_L_trace; //large component mass contribution
+        auto asc = std::dynamic_pointer_cast<ASCOperator>(this->chi);
+        if (!asc) MSG_ABORT("isX2C() true but chi is not an ASCOperator");
+        OrbitalVector Xphi = (*asc)(Phi);
+        double S_S_trace = mrcpp::calc_overlap_matrix(Xphi).real().trace(); //a bit wasteful to compute the full matrix, but space efficient here.
+        E_mc2 += (-c)*c*S_S_trace; //small component mass contribution
+
+        if (this->nuc != nullptr) { E_en = this->nuc->trace(Xphi).real(); }
+        if (this->coul != nullptr) E_ee = 0.5 * this->coul->trace(Xphi).real();
+        if (this->ex != nullptr) E_x = -this->exact_exchange * this->ex->trace(Xphi).real();
+        if (this->xc != nullptr) MSG_WARN("X2C not implemented for DFT");
+        // if (this->xc != nullptr) E_xc = this->xc->getEnergy();
+    }
+
     mrcpp::print::footer(2, t_tot, 2);
     if (plevel == 1) mrcpp::print::time(1, "Computing molecular energy", t_tot);
 
-    return SCFEnergy{E_kin, E_nn, E_en, E_ee, E_x, E_xc, E_next, E_eext, Er_tot, Er_nuc, Er_el, E_nl};
+    return SCFEnergy{E_kin, E_nn, E_en, E_ee, E_x, E_xc, E_next, E_eext, Er_tot, Er_nuc, Er_el, E_nl, E_mc2};
 }
 
 /** @brief Compute the Fock matrix F_ij = <bra_i|F|ket_j>
@@ -327,11 +346,14 @@ ComplexMatrix FockBuilder::operator()(OrbitalVector &bra, OrbitalVector &ket) {
     V_mat += potential()(bra, ket);
 
     if (isX2C()) {
+        double c = getLightSpeed();
+        V_mat += c*c*mrcpp::calc_overlap_matrix(bra,ket);
         auto asc = std::dynamic_pointer_cast<ASCOperator>(this->chi);
         if (!asc) MSG_ABORT("isX2C() true but chi is not an ASCOperator");
         OrbitalVector xKet = (*asc)(ket);
         OrbitalVector xBra = (*asc)(bra);
         V_mat += (*getNuclearOperator ())(xBra, xKet); //Temporary, but getting the exchange operator working with the coupling operator is going to be quite some work for not much expectation value impact
+        V_mat += (-1.0)*c*c*mrcpp::calc_overlap_matrix(xBra, xKet);
     }
 
     mrcpp::print::footer(2, t_tot, 2);
@@ -627,7 +649,7 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
     
     // Compute OrbitalVectors
     Timer t_pot;
-    //compute X2C correction term c(σ·p)VR|ψ>
+    //compute X2C correction term c^{-1}(σ·p)VR|ψ>
     OrbitalVector termTwo = (*asc)(Phi);
     MSG_INFO("termtwo interactive phi_spin="<< Phi[0].spin() << " after X applied=" << termTwo[0].spin());
     termTwo = V(termTwo);
@@ -640,7 +662,7 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
         termTwo[i].add({1.0, 0.0}, nabla_Phi[1]);
         termTwo[i].add({1.0, 0.0}, nabla_Phi[2]);
         // multiply by c
-        for (int comp=0; comp<Ncomponents; comp++) termTwo[i].func_ptr->data.c1[comp] *= (1.0)*c;
+        for (int comp=0; comp<Ncomponents; comp++) termTwo[i].func_ptr->data.c1[comp] *= (0.5/c); //0.5 because the HelmholtzOperator applies -2*G, and the Dirac propagator trick creates only -G
         // Free memory space by discarding no longer relevant trees. Should help mitigate the memory usage spike from this function
         for (int dim=0; dim<3; dim++) nabla_Phi[dim].free();
     }
@@ -649,7 +671,7 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
     for (int i = 0; i < Phi.size(); i++) {
         if (!mrcpp::mpi::my_func(i)) continue;
         for (int comp=0; comp<Ncomponents; comp++) 
-            termOne[i].func_ptr->data.c1[comp] *= (1.0)*eps[i];
+            termOne[i].func_ptr->data.c1[comp] *= (0.5 + eps[i]/(two_cc)); //0.5 because the HelmholtzOperator applies -2*G, and the Dirac propagator trick creates only -G
     }
     // Add up all the terms to form the inhomogeneous part of the Helmholtz equation
     Timer t_add;
@@ -657,7 +679,7 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
     for (int i = 0; i < out.size(); i++) {
         if (not mrcpp::mpi::my_func(out[i])) continue;
         out[i].add(1.0, termTwo[i]); 
-        out[i].add(1.0, Psi[i]);
+        out[i].add(0.5, Psi[i]); //0.5 because the HelmholtzOperator applies -2*G, and the Dirac propagator trick creates only -G
     };
     mrcpp::print::time(2, "Adding contributions", t_add);
     return out;

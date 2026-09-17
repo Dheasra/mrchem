@@ -294,12 +294,17 @@ json GroundStateSolver::optimize(Molecule &mol, FockBuilder &F) {
         }
 
         // Init Helmholtz operator
-        HelmholtzVector H(helm_prec, F_mat.real().diagonal());
+        // DoubleVector helmholtzParameters = F_mat.real().diagonal(); 
+        int apply_dirac_prop = 0;
+        if (F.isX2C()) {
+            apply_dirac_prop = 1;
+        }
+        HelmholtzVector H(helm_prec, F_mat.real().diagonal(), F.getLightSpeed());
         ComplexMatrix L_mat = H.getLambdaMatrix();
         
         // Apply Helmholtz operator
         OrbitalVector Psi = F.buildHelmholtzArgument(orb_prec, Phi_n, F_mat, L_mat);
-        OrbitalVector Phi_np1 = H(Psi);
+        OrbitalVector Phi_np1 = H(Psi, apply_dirac_prop);
         Psi.clear();
         F.clear();
         // Orthonormalize

@@ -48,9 +48,10 @@ extern mrcpp::MultiResolutionAnalysis<3> *MRA; // Global MRA
  * operators are constructed at this point, they are produced on-the-fly in
  * the application.
  */
-HelmholtzVector::HelmholtzVector(double pr, const DoubleVector &l)
+HelmholtzVector::HelmholtzVector(double pr, const DoubleVector &l, double c)
         : prec(pr) {
     this->lambda = l;
+    this->c = c;
     for (int i = 0; i < this->lambda.size(); i++) {
         if (this->lambda(i) > 0.0) this->lambda(i) = -0.5;
     }
@@ -67,7 +68,7 @@ HelmholtzVector::HelmholtzVector(double pr, const DoubleVector &l)
  * MPI: Output vector gets the same MPI distribution as input vector. Only
  *      local orbitals are computed.
  */
-OrbitalVector HelmholtzVector::operator()(OrbitalVector &Phi) const {
+OrbitalVector HelmholtzVector::operator()(OrbitalVector &Phi, int rel) const {
     Timer t_tot, t_lap;
     auto plevel = Printer::getPrintLevel();
     mrcpp::print::header(2, "Applying Helmholtz operators");
@@ -78,7 +79,7 @@ OrbitalVector HelmholtzVector::operator()(OrbitalVector &Phi) const {
         if (not mrcpp::mpi::my_func(out[i])) continue;
 
         t_lap.start();
-        out[i] = apply(i, Phi[i]);
+        out[i] = apply(i, Phi[i], rel);
 
         std::stringstream o_txt;
         o_txt << std::setw(4) << i;
@@ -138,8 +139,13 @@ OrbitalVector HelmholtzVector::apply(RankZeroOperator &V, OrbitalVector &Phi, Or
  *
  * Computes output as: out_i = -2H_i[phi_i]
  */
-Orbital HelmholtzVector::apply(int i, const Orbital &phi) const {
-    ComplexDouble mu_i = std::sqrt(-2.0 * this->lambda(i));
+Orbital HelmholtzVector::apply(int i, const Orbital &phi, int rel) const {
+    ComplexDouble mu_i;
+    if (rel) { // Dirac propagator argument
+        mu_i = std::sqrt(this->c*this->c - (this->lambda(i)*this->lambda(i))/(this->c*this->c));
+    } else {
+        mu_i = std::sqrt(-2.0 * this->lambda(i));
+    }
     if (std::abs(mu_i.imag()) > mrcpp::MachineZero) MSG_ABORT("Mu cannot be complex");
     mrcpp::HelmholtzOperator H(*MRA, mu_i.real(), this->prec);
 

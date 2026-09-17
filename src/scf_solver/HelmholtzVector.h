@@ -41,18 +41,23 @@ namespace mrchem {
 
 class HelmholtzVector final {
 public:
-    HelmholtzVector(double pr, const DoubleVector &l);
+    HelmholtzVector(double pr, const DoubleVector &l, double c = 0.0);
 
     DoubleMatrix getLambdaMatrix() const { return this->lambda.asDiagonal(); }
 
     OrbitalVector apply(RankZeroOperator &V, OrbitalVector &Phi, OrbitalVector &Psi) const;
-    OrbitalVector operator()(OrbitalVector &Phi) const;
+
+    /** @brief apply the Helmholtz/Yukawa kernel to an Orbital vector
+     *  @param rel: selector to choose between non-relativistic Helmholtz parameter or relativistic choices. int for flexibility of future implementations
+     */
+    OrbitalVector operator()(OrbitalVector &Phi, int rel = 0) const;
 
 private:
     double prec;         ///< Precision for construction and application of Helmholtz operators
+    double c;            ///< speed of light, required for the Dirac propagator
     DoubleVector lambda; ///< Helmholtz parameter, mu_i = sqrt(-2.0*lambda_i)
 
-    Orbital apply(int i, const Orbital &phi) const;
+    Orbital apply(int i, const Orbital &phi, int rel = 0) const;
 };
 
 } // namespace mrchem

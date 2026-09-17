@@ -48,12 +48,12 @@ public:
                        double x = 0.0, double xc = 0.0,
                        double next = 0.0, double eext = 0.0,
                        double rt = 0.0, double rn = 0.0, double re = 0.0,
-                       double nl = 0.0) :
+                       double nl = 0.0, double mc2 = 0.0) :
         E_kin(kin), E_nn(nn), E_en(en), E_ee(ee),
           E_x(x), E_xc(xc), E_next(next), E_eext(eext), Er_tot(rt), 
-          Er_nuc(rn), Er_el(re), E_nl(nl) {
+          Er_nuc(rn), Er_el(re), E_nl(nl), E_mc2(mc2) {
             E_nuc = E_nn + E_next + Er_nuc;
-            E_el = E_kin + E_en + E_ee + E_xc + E_x + E_eext + Er_el + E_nl;
+            E_el = E_kin + E_en + E_ee + E_xc + E_x + E_eext + Er_el + E_nl;// + E_mc2;
         }
 
     double getTotalEnergy() const { return this->E_nuc + this->E_el; }
@@ -90,6 +90,7 @@ public:
         print_utils::scalar(0, "X-C energy       ", E_xc,   "(au)", pprec, false);
         print_utils::scalar(0, "N-N energy       ", E_nn,   "(au)", pprec, false);
         print_utils::scalar(0, "Non-local pp energy ", E_nl,   "(au)", pprec, false);
+        print_utils::scalar(0, "Mass energy ", E_mc2,   "(au)", pprec, false);
 
         if (has_ext) {
             mrcpp::print::separator(0, '-');
@@ -130,6 +131,7 @@ public:
             {"Er_nuc", Er_nuc},
             {"E_nuc", E_nuc},
             {"E_nl", E_nl},
+            {"E_mc2", E_mc2},
             {"E_tot", E_nuc + E_el}
         };
     }
@@ -150,6 +152,7 @@ private:
     double Er_nuc{0.0};
     double Er_el{0.0};
     double E_nl{0.0};
+    double E_mc2{0.0};
 };
 // clang-format on
 
