@@ -639,19 +639,20 @@ ComplexMatrix orbital::orthonormalize_ASC(double prec, OrbitalVector &Phi_L, Com
     MSG_INFO("ASC Overlap S="<< S << " Large overlap="<< orbital::calc_overlap_matrix(Phi_L, Phi_L));
     ComplexMatrix U = math_utils::hermitian_matrix_pow(S, -0.5);   // same utility kramers_orthonormalize already uses
 
+    t_lap.start();
     mrcpp::rotate(Phi_L, U, prec);   // rotate the large components only
+
+
     ComplexMatrix Stut = orbital::calc_overlap_matrix(Phi_L, Phi_L)
                     + orbital::calc_overlap_matrix(Psi_S, Psi_S); // S_LL + X^dagger X contribution
     MSG_INFO("ASC Post ortho S="<< Stut << " Large overlap="<< orbital::calc_overlap_matrix(Phi_L, Phi_L));
     
-    F = U.adjoint() * F * U;          // same Fock congruence transform as orthonormalize/kramers_orthonormalize
-
-    t_lap.start();
+    
     mrcpp::rotate(Phi_L, U, prec);
     mrcpp::print::time(2, "Rotating orbitals", t_lap);
-
+    
     // Transform Fock matrix
-    F = U.adjoint() * F * U;
+    F = U.adjoint() * F * U;          // same Fock congruence transform as orthonormalize/kramers_orthonormalize
     mrcpp::print::footer(2, t_tot, 2);
     if (plevel == 1) mrcpp::print::time(1, "Lowdin orthonormalization", t_tot);
 

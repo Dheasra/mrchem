@@ -227,6 +227,7 @@ ASCOperator::ASCOperator(const Nuclei &nucs, const std::vector<std::string> &lar
         mrcpp::CompFunction<3> large_real;
         large_real.defreal();
         large_real.alloc(2, true);
+        MSG_INFO("path_comp[0]="<<large_tree_paths[i]+"_Large_alpha_real");
         large_real.CompD[0]->loadTree(large_tree_paths[i]+"_Large_alpha_real");
         MSG_INFO("a "<< large_real.CompD[0]->getNNodes());
         large_real.CompD[1]->loadTree(large_tree_paths[i]+"_Large_beta_real");
@@ -249,20 +250,21 @@ ASCOperator::ASCOperator(const Nuclei &nucs, const std::vector<std::string> &lar
         std::vector<mrcpp::CompFunction<3>> small_comps(0);
         MSG_INFO("c");
         this->large->push_back(large_tmp);
-        MSG_INFO("d large ok");
+        MSG_INFO("d large ok path_small=" << small_tree_paths[i]+"_Small_alpha_real");
+        MSG_INFO("d large ok path_Small=" << small_tree_paths[i]+"_Small_beta_real");
         mrcpp::CompFunction<3> small_real;
         small_real.defreal();
         small_real.alloc(2, true);
-        small_real.CompD[0]->loadTree(small_tree_paths[i]+"_small_alpha_real");
-        small_real.CompD[1]->loadTree(small_tree_paths[i]+"_small_beta_real");
+        small_real.CompD[0]->loadTree(small_tree_paths[i]+"_Small_alpha_real");
+        small_real.CompD[1]->loadTree(small_tree_paths[i]+"_Small_beta_real");
         small_comps.push_back(small_real);
         // small_alpha_real.CompD[0]
         MSG_INFO("e");
         mrcpp::CompFunction<3> small_imag;
         small_imag.defreal();
         small_imag.alloc(2, true);
-        small_imag.CompD[0]->loadTree(small_tree_paths[i]+"_small_alpha_imag");
-        small_imag.CompD[1]->loadTree(small_tree_paths[i]+"_small_beta_imag");
+        small_imag.CompD[0]->loadTree(small_tree_paths[i]+"_Small_alpha_imag");
+        small_imag.CompD[1]->loadTree(small_tree_paths[i]+"_Small_beta_imag");
         small_comps.push_back(small_imag);
         mrcpp::CompFunction<3> small_tmp;
         MSG_INFO("f");
@@ -272,6 +274,11 @@ ASCOperator::ASCOperator(const Nuclei &nucs, const std::vector<std::string> &lar
         this->small->push_back(small_tmp);
         MSG_INFO("g end");
     }
+    //orthogonalising the large component between themselves
+    ComplexMatrix SL = mrcpp::calc_overlap_matrix(*(this->large));
+    ComplexMatrix U = math_utils::hermitian_matrix_pow(SL, -1.0);
+    mrcpp::rotate(*(this->large), U, proj_prec);
+    
     // mrcpp::print::time(2, "Gaussian coupling operator (large component, N=" + std::to_string(this->large->size()) + ")", timer);
     // mrcpp::print::time(2, "Gaussian coupling operator (small component, N=" + std::to_string(this->small->size()) + ")", timer);
 }
@@ -282,6 +289,12 @@ ASCOperator::ASCOperator(const Nuclei &nucs, const std::vector<std::string> &lar
     this->large = project_large_spinor_set(nucs, large_bas_files, large_coef_files, proj_prec, screen, coeff_thrs);
     MSG_INFO("work ya git: large 0 path="<< large_coef_files[0]);
     this->small = project_small_spinor_set(nucs, large_bas_files, small_coef_files, proj_prec, screen, coeff_thrs);
+
+    //orthogonalising the large component between themselves
+    ComplexMatrix SL = mrcpp::calc_overlap_matrix(*(this->large));
+    ComplexMatrix U = math_utils::hermitian_matrix_pow(SL, -1.0);
+    mrcpp::rotate(*(this->large), U, proj_prec);
+
     mrcpp::print::time(2, "Gaussian coupling operator (large component, N=" + std::to_string(this->large->size()) + ")", timer);
     mrcpp::print::time(2, "Gaussian coupling operator (small component, N=" + std::to_string(this->small->size()) + ")", timer);
 }
@@ -296,8 +309,9 @@ OrbitalVector ASCOperator::operator()(OrbitalVector &inp) {
         std::vector<ComplexDouble> vec_Lket(row_Lket.begin(), row_Lket.end()); //transmuting the block to the needed type
         Orbital out_tmp (inp[i].getFuncData());
         mrcpp::linear_combination(out_tmp, vec_Lket, *(this->small),-1.0, false);
-        MSG_INFO("aaaaaaaaaaa" << out_tmp.spin() << " inp_spin=" << inp[0].spin());
-        out_tmp.func_ptr->data = inp[i].func_ptr->data;
+        MSG_INFO("aaaaaaaaaaa" << out_tmp.spin() << " inp_spin=" << inp[0].spin()); 
+        // out_tmp.func_ptr->data = inp[i].func_ptr->data;
+        out_tmp.func_ptr->data.n1[0] = inp[i].func_ptr->data.n1[0]; //transmitting the spin to out_tmp
         MSG_INFO("bbbbbbbbbbb" << out_tmp.spin() << " inp_spin=" << inp[0].spin());
         out.push_back(out_tmp);
     }

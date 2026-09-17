@@ -1418,8 +1418,8 @@ void driver::build_fock_operator(const json &json_fock, Molecule &mol, FockBuild
             trees_paths.push_back(bas_dir+"/"+nuc_symbol);
         }
         auto proj_prec = json_fock["nuclear_operator"]["proj_prec"]; //place holder, will eventually need to be adapted to its own parameter
-        F.getCouplingOperator() = std::make_shared<ASCOperator>(nuclei, basis_files_paths, large_coeff_paths, small_coeff_paths, proj_prec);
-        // F.getCouplingOperator() = std::make_shared<ASCOperator>(nuclei, trees_paths, trees_paths,  proj_prec); //placeholder mrcpp trees version
+        // F.getCouplingOperator() = std::make_shared<ASCOperator>(nuclei, basis_files_paths, large_coeff_paths, small_coeff_paths, proj_prec);
+        F.getCouplingOperator() = std::make_shared<ASCOperator>(nuclei, trees_paths, trees_paths,  proj_prec); //placeholder mrcpp trees version
 ;
     }
     ///////////////////////////////////////////////////////////
