@@ -112,13 +112,13 @@ public:
             print_utils::scalar(0, "Reaction energy (tot) ", Er_tot,  "(au)", pprec, false);
         }
         mrcpp::print::separator(0, '-');
-        print_utils::scalar(0, "Electronic energy", E_el-c*c,   "(au)", pprec, false);
+        print_utils::scalar(0, "Electronic energy (-c^2)", E_el-c*c,   "(au)", pprec, false);
         print_utils::scalar(0, "Nuclear energy   ", E_nuc,  "(au)", pprec, false);
         mrcpp::print::separator(0, '-');
-        print_utils::scalar(0, "Total energy     ", E_au,   "(au)", pprec, true);
-        print_utils::scalar(0, "                 ", E_kcal, "(kcal/mol)", pprec, true);
-        print_utils::scalar(0, "                 ", E_kJ,   "(kJ/mol)", pprec, true);
-        print_utils::scalar(0, "                 ", E_eV,   "(eV)", pprec, true);
+        print_utils::scalar(0, "Total energy (-c^2) ", E_au,   "(au)", pprec, true);
+        print_utils::scalar(0, "                    ", E_kcal, "(kcal/mol)", pprec, true);
+        print_utils::scalar(0, "                    ", E_kJ,   "(kJ/mol)", pprec, true);
+        print_utils::scalar(0, "                    ", E_eV,   "(eV)", pprec, true);
         mrcpp::print::separator(0, '=', 2);
     }
 

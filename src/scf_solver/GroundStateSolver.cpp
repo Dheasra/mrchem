@@ -294,20 +294,23 @@ json GroundStateSolver::optimize(Molecule &mol, FockBuilder &F) {
         }
 
         // Init Helmholtz operator
-        // DoubleVector helmholtzParameters = F_mat.real().diagonal(); 
         int apply_dirac_prop = 0;
-        // double c = F.getLightSpeed();
+        
         if (F.isX2C()) {
             apply_dirac_prop = 1;
-
+            
             double cc = F.getLightSpeed() * F.getLightSpeed();
             MSG_INFO("Diagonal Fock="<< F_mat.real().diagonal()<<  " -c^2"<< F_mat.real().trace()-cc);
             // for (int i=0; i<Phi_n.size(); i++) {
-            //     helmholtzParameters[i] -= c*c;
-            // }
-            // MSG_INFO("rescaled Diagonal Fock="<< helmholtzParameters);
+                //     helmholtzParameters[i] -= c*c;
+                // }
+                // MSG_INFO("rescaled Diagonal Fock="<< helmholtzParameters);
         }
-        HelmholtzVector H(helm_prec, F_mat.real().diagonal(), F.getLightSpeed(), apply_dirac_prop);
+        double c = F.getLightSpeed(); //debug
+        DoubleVector helmholtzParameters = F_mat.real().diagonal(); //debug
+        for (int i=0; i<helmholtzParameters.size(); i++) helmholtzParameters[i] = c*c - 0.5000067; //debug
+        HelmholtzVector H(helm_prec, helmholtzParameters, F.getLightSpeed(), apply_dirac_prop); // debug
+        // HelmholtzVector H(helm_prec, F_mat.real().diagonal(), F.getLightSpeed(), apply_dirac_prop); //original
         ComplexMatrix L_mat = H.getLambdaMatrix();
         
         MSG_INFO("F_mat-L_mat" << F_mat - L_mat);

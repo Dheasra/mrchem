@@ -352,7 +352,7 @@ ComplexMatrix qmoperator::calc_kinetic_matrix_linear_momentum( MomentumOperator 
 
         nNodes += orbital::get_n_nodes(dKet);
         sNodes += orbital::get_size_nodes(dKet);
-        T = X(dKet, ket) + X(ket, dKet); //Kinetic operator is c(σ·p)V (with V being NOT the potential operator here)
+        T = X(dKet, ket) + (X(ket, dKet)).adjoint(); //Kinetic operator is c(σ·p)V (with V being NOT the potential operator here)
         
     } else {
         OrbitalVector dBra_x = p[0](bra, 1); //<bra|(σ_x·p_x)

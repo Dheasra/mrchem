@@ -340,6 +340,7 @@ ComplexMatrix FockBuilder::operator()(OrbitalVector &bra, OrbitalVector &ket) {
         auto asc = std::dynamic_pointer_cast<ASCOperator>(this->chi);
         if (!asc) MSG_ABORT("isX2C() true but chi is not an ASCOperator");
         T_mat = c*qmoperator::calc_kinetic_matrix_linear_momentum(momentum(), *asc, bra, ket); //+ c*qmoperator::calc_kinetic_matrix_linear_momentum(momentum(), *asc, ket, bra);
+        MSG_INFO("Kinetic matrix=" << T_mat);
     } else {
         T_mat = qmoperator::calc_kinetic_matrix(momentum(), bra, ket);
     }
@@ -347,15 +348,20 @@ ComplexMatrix FockBuilder::operator()(OrbitalVector &bra, OrbitalVector &ket) {
     ComplexMatrix V_mat = ComplexMatrix::Zero(bra.size(), ket.size());
     V_mat += potential()(bra, ket);
 
+    MSG_INFO("Potential matrix (large contrib)="<< V_mat)
     if (isX2C()) {
         double c = getLightSpeed();
         V_mat += c*c*mrcpp::calc_overlap_matrix(bra,ket);
+        MSG_INFO("Mass energy matrix (large contrib)="<< c*c*mrcpp::calc_overlap_matrix(bra,ket));
         auto asc = std::dynamic_pointer_cast<ASCOperator>(this->chi);
         if (!asc) MSG_ABORT("isX2C() true but chi is not an ASCOperator");
         OrbitalVector xKet = (*asc)(ket);
         OrbitalVector xBra = (*asc)(bra);
-        V_mat += (*getNuclearOperator ())(xBra, xKet); //Temporary, but getting the exchange operator working with the coupling operator is going to be quite some work for not much expectation value impact
+        // V_mat += (*getNuclearOperator ())(xBra, xKet); //Temporary, but getting the exchange operator working with the coupling operator is going to be quite some work for not much expectation value impact
+        V_mat += potential()(xBra, xKet);
+        MSG_INFO("Potential matrix (small contrib)="<< potential()(xBra, xKet));
         V_mat += (-1.0)*c*c*mrcpp::calc_overlap_matrix(xBra, xKet);
+        MSG_INFO("Mass energy matrix (small contrib)="<< (-1.0)*c*c*mrcpp::calc_overlap_matrix(xBra, xKet));
     }
 
     mrcpp::print::footer(2, t_tot, 2);
@@ -674,7 +680,8 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
         if (!mrcpp::mpi::my_func(i)) continue;
         MSG_INFO("epsilon energy="<<eps[i]);
         for (int comp=0; comp<Ncomponents; comp++) 
-        termOne[i].func_ptr->data.c1[comp] *= (0.5 + eps[i]/(two_cc)); //0.5 because the HelmholtzOperator applies -2*G, and the Dirac propagator trick creates only -G
+        // termOne[i].func_ptr->data.c1[comp] *= (0.5 + eps[i]/(two_cc)); //0.5 because the HelmholtzOperator applies -2*G, and the Dirac propagator trick creates only -G
+        termOne[i].func_ptr->data.c1[comp] *= (0.5 + (c*c -0.5000067)/(two_cc)); //debug
     }
     MSG_INFO("termOne norm="<< termOne[0].norm());
     MSG_INFO("termTwo norm="<< termTwo[0].norm());
