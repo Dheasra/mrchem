@@ -278,6 +278,8 @@ SCFEnergy FockBuilder::trace(OrbitalVector &Phi, const Nuclei &nucs) {
         OrbitalVector Xphi = (*asc)(Phi);
         double S_S_trace = mrcpp::calc_overlap_matrix(Xphi).real().trace(); //a bit wasteful to compute the full matrix, but space efficient here.
         E_mc2 += (-c)*c*S_S_trace; //small component mass contribution
+        MSG_INFO("Mass contrib="<< E_mc2);
+        // E_mc2 -= c*c; //shifting the gauge down
 
         if (this->nuc != nullptr) { E_en += this->nuc->trace(Xphi).real(); }
         if (this->coul != nullptr) E_ee += 0.5 * this->coul->trace(Xphi).real();
@@ -662,17 +664,25 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
         termTwo[i].add({1.0, 0.0}, nabla_Phi[1]);
         termTwo[i].add({1.0, 0.0}, nabla_Phi[2]);
         // multiply by c
-        for (int comp=0; comp<Ncomponents; comp++) termTwo[i].func_ptr->data.c1[comp] *= -(0.5/c); //0.5 because the HelmholtzOperator applies -2*G, and the Dirac propagator trick creates only -G
+        for (int comp=0; comp<Ncomponents; comp++) termTwo[i].func_ptr->data.c1[comp] *= (0.5/c); //0.5 because the HelmholtzOperator applies -2*G, and the Dirac propagator trick creates only -G
         // Free memory space by discarding no longer relevant trees. Should help mitigate the memory usage spike from this function
         for (int dim=0; dim<3; dim++) nabla_Phi[dim].free();
     }
-
+    
     OrbitalVector termOne = V(Phi);//compute first term EV|ψ>
     for (int i = 0; i < Phi.size(); i++) {
         if (!mrcpp::mpi::my_func(i)) continue;
+        MSG_INFO("epsilon energy="<<eps[i]);
         for (int comp=0; comp<Ncomponents; comp++) 
-            termOne[i].func_ptr->data.c1[comp] *= -(0.5 + eps[i]/(two_cc)); //0.5 because the HelmholtzOperator applies -2*G, and the Dirac propagator trick creates only -G
+        termOne[i].func_ptr->data.c1[comp] *= (0.5 + eps[i]/(two_cc)); //0.5 because the HelmholtzOperator applies -2*G, and the Dirac propagator trick creates only -G
     }
+    MSG_INFO("termOne norm="<< termOne[0].norm());
+    MSG_INFO("termTwo norm="<< termTwo[0].norm());
+    MSG_INFO("Psi norm="<< Psi[0].norm());
+
+    MSG_INFO("<phi^L |termOne>"<< mrcpp::dot(Phi[0],termOne[0]));
+    MSG_INFO("<phi^L |termTWo>"<< mrcpp::dot(Phi[0],termTwo[0]));
+    MSG_INFO("<phi^L |psi>"<< mrcpp::dot(Phi[0],Psi[0]));
     // Add up all the terms to form the inhomogeneous part of the Helmholtz equation
     Timer t_add;
     OrbitalVector out = orbital::deep_copy(termOne);

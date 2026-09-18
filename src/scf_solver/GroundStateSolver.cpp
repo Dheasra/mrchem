@@ -299,7 +299,9 @@ json GroundStateSolver::optimize(Molecule &mol, FockBuilder &F) {
         // double c = F.getLightSpeed();
         if (F.isX2C()) {
             apply_dirac_prop = 1;
-            MSG_INFO("Diagonal Fock="<< F_mat.real().diagonal());
+
+            double cc = F.getLightSpeed() * F.getLightSpeed();
+            MSG_INFO("Diagonal Fock="<< F_mat.real().diagonal()<<  " -c^2"<< F_mat.real().trace()-cc);
             // for (int i=0; i<Phi_n.size(); i++) {
             //     helmholtzParameters[i] -= c*c;
             // }
@@ -407,7 +409,12 @@ json GroundStateSolver::optimize(Molecule &mol, FockBuilder &F) {
 
         // Finalize SCF cycle
         if (plevel < 1) printConvergenceRow(nIter);
-        printOrbitals(F_mat.real().diagonal(), errors, Phi_n, 0);
+        // DoubleVector test = F_mat.real().diagonal(); //debug
+        // for (int i=0; i<test.size(); i++) { //debug
+        //     test[i] -= F.getLightSpeed()*F.getLightSpeed(); //debug
+        // } //debug 
+        // printOrbitals(test, errors, Phi_n, 0); //debug
+        printOrbitals(F_mat.real().diagonal(), errors, Phi_n, 0); //original
         mrcpp::print::separator(1, '-');
         printResidual(err_t, converged);
         mrcpp::print::separator(2, '=', 2);

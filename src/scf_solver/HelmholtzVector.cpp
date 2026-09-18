@@ -146,8 +146,10 @@ OrbitalVector HelmholtzVector::apply(RankZeroOperator &V, OrbitalVector &Phi, Or
 Orbital HelmholtzVector::apply(int i, const Orbital &phi, int rel) const {
     ComplexDouble mu_i;
     if (rel) { // Dirac propagator argument
-        MSG_INFO("helmholtz parameter=" << this->lambda(i));
-        mu_i = std::sqrt(this->c*this->c - ((this->lambda(i))*(this->lambda(i)))/(this->c*this->c));
+        double cc = (this->c)*(this->c);
+        MSG_INFO("helmholtz energy input=" << this->lambda(i)<< " -c^2 =" << this->lambda(i) - cc);
+        mu_i = std::sqrt((cc*cc - (this->lambda(i))*(this->lambda(i)))/cc);
+        MSG_INFO("helmholtz parameter mu=" << mu_i);
     } else {
         mu_i = std::sqrt(-2.0 * this->lambda(i));
     }

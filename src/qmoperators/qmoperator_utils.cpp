@@ -322,7 +322,7 @@ ComplexDouble qmoperator::calc_kinetic_trace_linear_momentum( MomentumOperator &
     T += std::conj(T); //test debug energy
 
     mrcpp::print::tree(2, "<i|sigma p kappa sigma p|j>", nNodes, sNodes, timer.elapsed());
-    return 0.5*T;
+    return T;
 }
 
 /** @brief X2C/Dirac spinorial computation of the kinetic matrix 
@@ -376,7 +376,7 @@ ComplexMatrix qmoperator::calc_kinetic_matrix_linear_momentum( MomentumOperator 
         T = X(dBra, ket) + (X(dKet, bra)).adjoint();
     }
     mrcpp::print::tree(2, "<i|sigma p kappa sigma p|j>", nNodes, sNodes, timer.elapsed());
-    return 0.5*T;
+    return T;
 }
 
 } // namespace mrchem

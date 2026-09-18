@@ -630,7 +630,9 @@ bool driver::scf::guess_energy(const json &json_guess, Molecule &mol, FockBuilde
     F.setup(prec);
     MSG_INFO("badaboum");
     F_mat = F(Phi, Phi);
-    MSG_INFO("patatra");
+    double cc = F.getLightSpeed() * F.getLightSpeed();
+    double tutE =  F.trace(Phi, nucs).getTotalEnergy();
+    MSG_INFO("patatra="<< tutE<< " -c^2="<<tutE-cc);
     mol.getSCFEnergy() = F.trace(Phi, nucs);
     MSG_INFO("plouf");
     F.clear();
@@ -638,6 +640,10 @@ bool driver::scf::guess_energy(const json &json_guess, Molecule &mol, FockBuilde
 
     if (not localize && rotate) orbital::diagonalize(prec, Phi, F_mat);
     if (plevel == 1) mrcpp::print::footer(1, t_scf, 2);
+
+    // double frutE =  F.trace(Phi, nucs).getTotalEnergy();
+    // MSG_INFO("post diag="<< frutE<< " -c^2="<<frutE-cc);
+    // F.clear();
 
     Timer t_eps;
     mrcpp::print::header(1, "Computing orbital energies");
