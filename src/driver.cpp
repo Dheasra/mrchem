@@ -1404,11 +1404,13 @@ void driver::build_fock_operator(const json &json_fock, Molecule &mol, FockBuild
         bool is_asc = json_fock["asc_operator"]["isASC"];
         F.setX2CType(is_asc);
 
-        std::string bas_dir = ""; //basis set files directory
-        if (json_fock["asc_operator"].contains("bas_dir_path")) { bas_dir = json_fock["asc_operator"]["bas_dir_path"]; }
+        std::string basis_dir = ""; //basis set files directory
+        if (json_fock["asc_operator"].contains("bas_dir_path")) { basis_dir = json_fock["asc_operator"]["bas_dir_path"]; }
         std::string coeff_dir = ""; //coefficient matrix files directory
         if (json_fock["asc_operator"].contains("coeff_dir_path")) { coeff_dir = json_fock["asc_operator"]["coeff_dir_path"]; }
-        if (bas_dir == "" or coeff_dir == "") MSG_ABORT("Missing paths for the basis set files and/or coefficent matrices. Basis dir="<< bas_dir << " Coefficent dir="<<coeff_dir);
+        std::string tree_dir = ""; //MW tree files directory
+        if (json_fock["asc_operator"].contains("tree_dir_path")) { tree_dir = json_fock["asc_operator"]["tree_dir_path"]; }
+        if ((basis_dir == "" or coeff_dir == "") and tree_dir == "") MSG_ABORT("Missing paths for either the basis set files and coefficent matrices or the MW trees. Basis dir="<< basis_dir << ", Coefficent dir="<<coeff_dir  << ", MW trees dir="<< tree_dir);
 
         // Getting the paths to the relevant files
         mrchem::Nuclei nuclei = mol.getNuclei(); //Nuclei is defined as a vector of nucleus
@@ -1418,14 +1420,14 @@ void driver::build_fock_operator(const json &json_fock, Molecule &mol, FockBuild
         std::vector<std::string> trees_paths; //names of small coefficient matrices files within coeff_dir
         for (int nuc=0; nuc<nuclei.size();nuc++){
             auto nuc_symbol = nuclei[nuc].getSymbol() ;
-            basis_files_paths.push_back(bas_dir+"/"+nuc_symbol+".bas");
+            basis_files_paths.push_back(basis_dir+"/"+nuc_symbol+".bas");
             large_coeff_paths.push_back(coeff_dir+"/"+nuc_symbol+"_large.coef");
             small_coeff_paths.push_back(coeff_dir+"/"+nuc_symbol+"_small.coef");
-            trees_paths.push_back(bas_dir+"/"+nuc_symbol);
+            trees_paths.push_back(tree_dir+"/"+nuc_symbol);
         }
         auto proj_prec = json_fock["nuclear_operator"]["proj_prec"]; //place holder, will eventually need to be adapted to its own parameter
-        // F.getCouplingOperator() = std::make_shared<ASCOperator>(nuclei, basis_files_paths, large_coeff_paths, small_coeff_paths, proj_prec);
-        F.getCouplingOperator() = std::make_shared<ASCOperator>(nuclei, trees_paths, trees_paths,  proj_prec); //placeholder mrcpp trees version
+        if (basis_dir != "" and coeff_dir != "") F.getCouplingOperator() = std::make_shared<ASCOperator>(nuclei, basis_files_paths, large_coeff_paths, small_coeff_paths, proj_prec);
+        if (tree_dir != "") F.getCouplingOperator() = std::make_shared<ASCOperator>(nuclei, trees_paths, trees_paths,  proj_prec); 
 ;
     }
     ///////////////////////////////////////////////////////////

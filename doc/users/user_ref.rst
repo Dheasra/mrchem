@@ -416,7 +416,7 @@ User input reference
   
     **Default** ``none``
   
- :ACS: Define required parameters for the atomic small component Hamiltonian. 
+ :ASC: Define required parameters for the atomic small component Hamiltonian. 
 
   :red:`Keywords`
    :bas_dir_path: Path to the directory containing the atomic basis set files. Only one atom per file. 
@@ -426,6 +426,12 @@ User input reference
     **Default** ``none``
   
    :coeff_dir_path: Path to the directory containing the coefficent matrices of 4C GTO calculations. 
+  
+    **Type** ``str``
+  
+    **Default** ``none``
+  
+   :tree_dir_path: Path to the directory containing the tree files of all elements from the 4C ReMRChem.  (Specific format to be determined, for now it uses the ReMRChem pilot's) 
   
     **Type** ``str``
   

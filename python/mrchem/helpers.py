@@ -88,6 +88,8 @@ def write_scf_fock(user_dict, wf_dict, origin):
                 fock_dict["asc_operator"]["bas_dir_path"] = user_dict["ASC"]["bas_dir_path"]
             if user_dict["ASC"]["coeff_dir_path"].lower() != "none":
                 fock_dict["asc_operator"]["coeff_dir_path"] = user_dict["ASC"]["coeff_dir_path"]
+            if user_dict["ASC"]["tree_dir_path"].lower() != "none":
+                fock_dict["asc_operator"]["tree_dir_path"] = user_dict["ASC"]["tree_dir_path"]
 
     # Kinetic
     fock_dict["kinetic_operator"] = {"derivative": user_dict["Derivatives"]["kinetic"]}

@@ -396,6 +396,12 @@ sections:
         default: none
         docstring: |
           Path to the directory containing the coefficent matrices of 4C GTO calculations.
+      - name: tree_dir_path
+        type: str
+        default: none
+        docstring: |
+          Path to the directory containing the tree files of all elements from the 4C ReMRChem. 
+          (Specific format to be determined, for now it uses the ReMRChem pilot's)
   - name: DFT
     docstring: |
       Define the exchange-correlation functional in case of DFT.

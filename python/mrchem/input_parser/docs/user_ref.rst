@@ -431,6 +431,12 @@ User input reference
   
     **Default** ``none``
   
+   :tree_dir_path: Path to the directory containing the tree files of all elements from the 4C ReMRChem.  (Specific format to be determined, for now it uses the ReMRChem pilot's) 
+  
+    **Type** ``str``
+  
+    **Default** ``none``
+  
  :DFT: Define the exchange-correlation functional in case of DFT. 
 
   :red:`Keywords`
