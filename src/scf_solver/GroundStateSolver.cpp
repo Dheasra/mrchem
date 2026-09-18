@@ -300,20 +300,10 @@ json GroundStateSolver::optimize(Molecule &mol, FockBuilder &F) {
             apply_dirac_prop = 1;
             
             double cc = F.getLightSpeed() * F.getLightSpeed();
-            MSG_INFO("Diagonal Fock="<< F_mat.real().diagonal()<<  " -c^2"<< F_mat.real().trace()-cc);
-            // for (int i=0; i<Phi_n.size(); i++) {
-                //     helmholtzParameters[i] -= c*c;
-                // }
-                // MSG_INFO("rescaled Diagonal Fock="<< helmholtzParameters);
         }
-        double c = F.getLightSpeed(); //debug
-        DoubleVector helmholtzParameters = F_mat.real().diagonal(); //debug
-        for (int i=0; i<helmholtzParameters.size(); i++) helmholtzParameters[i] = c*c - 0.5000067; //debug
-        HelmholtzVector H(helm_prec, helmholtzParameters, F.getLightSpeed(), apply_dirac_prop); // debug
-        // HelmholtzVector H(helm_prec, F_mat.real().diagonal(), F.getLightSpeed(), apply_dirac_prop); //original
+        HelmholtzVector H(helm_prec, F_mat.real().diagonal(), F.getLightSpeed(), apply_dirac_prop); //original
         ComplexMatrix L_mat = H.getLambdaMatrix();
         
-        F_mat = L_mat; //debug
         MSG_INFO("F_mat-L_mat" << F_mat - L_mat);
 
         // Apply Helmholtz operator
@@ -381,9 +371,7 @@ json GroundStateSolver::optimize(Molecule &mol, FockBuilder &F) {
         if (F.isX2C()){ //maybe this could be done more elegantly, but for now it is how it is
             auto asc = std::dynamic_pointer_cast<ASCOperator>(F.getCouplingOperator());
             if (!asc) MSG_ABORT("isX2C() true but chi is not an ASCOperator");
-            MSG_INFO("proutproutprout");
             orbital::orthonormalize_ASC(orb_prec, Phi_n, F_mat, *asc);
-            MSG_INFO("proutproutprout2");
         } else {
             orbital::orthonormalize(orb_prec, Phi_n, F_mat); //TODO: maybe add a path to enforce Kramers symmetry when restricted and 2c
         }

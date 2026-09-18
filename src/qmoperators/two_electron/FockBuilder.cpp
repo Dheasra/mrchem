@@ -357,7 +357,6 @@ ComplexMatrix FockBuilder::operator()(OrbitalVector &bra, OrbitalVector &ket) {
         if (!asc) MSG_ABORT("isX2C() true but chi is not an ASCOperator");
         OrbitalVector xKet = (*asc)(ket);
         OrbitalVector xBra = (*asc)(bra);
-        // V_mat += (*getNuclearOperator ())(xBra, xKet); //Temporary, but getting the exchange operator working with the coupling operator is going to be quite some work for not much expectation value impact
         V_mat += potential()(xBra, xKet);
         MSG_INFO("Potential matrix (small contrib)="<< potential()(xBra, xKet));
         V_mat += (-1.0)*c*c*mrcpp::calc_overlap_matrix(xBra, xKet);
@@ -639,7 +638,6 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
     // Get necessary operators
     double c = getLightSpeed();
     double two_cc = 2.0 * c * c;
-    MSG_INFO("x2c of aluminium");
     MomentumOperator &p = momentum();
     RankZeroOperator &V = potential();
     // ASCOperator &chi = *this->chi; //I don't think I can instantiate it, because this->chi points to a CouplingOperator, but the operator here HAS to be an ASCOperator to work due to its overriden methods
@@ -659,7 +657,6 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
     Timer t_pot;
     //compute X2C correction term c^{-1}(σ·p)VR|ψ>
     OrbitalVector termTwo = (*asc)(Phi);
-    MSG_INFO("termtwo interactive phi_spin="<< Phi[0].spin() << " after X applied=" << termTwo[0].spin());
     termTwo = V(termTwo);
     for (int i = 0; i < Phi.size(); i++) {
         if (!mrcpp::mpi::my_func(i)) continue;
@@ -680,8 +677,7 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
         if (!mrcpp::mpi::my_func(i)) continue;
         MSG_INFO("epsilon energy="<<eps[i]);
         for (int comp=0; comp<Ncomponents; comp++) 
-        // termOne[i].func_ptr->data.c1[comp] *= (0.5 + eps[i]/(two_cc)); //0.5 because the HelmholtzOperator applies -2*G, and the Dirac propagator trick creates only -G
-        termOne[i].func_ptr->data.c1[comp] *= (0.5 + (c*c -0.5000067)/(two_cc)); //debug
+        termOne[i].func_ptr->data.c1[comp] *= (0.5 + eps[i]/(two_cc)); //0.5 because the HelmholtzOperator applies -2*G, and the Dirac propagator trick creates only -G
     }
     MSG_INFO("termOne norm="<< termOne[0].norm());
     MSG_INFO("termTwo norm="<< termTwo[0].norm());
