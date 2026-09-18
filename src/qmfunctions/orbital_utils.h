@@ -65,6 +65,9 @@ ComplexMatrix calc_overlap_matrix(OrbitalVector &Bra, OrbitalVector &Ket);
 
 ComplexMatrix localize(double prec, OrbitalVector &Phi, ComplexMatrix &F);
 ComplexMatrix diagonalize(double prec, OrbitalVector &Phi, ComplexMatrix &F);
+/** @brief Diagonalise F against Phi + Psi, rotate only Phi
+ */
+ComplexMatrix diagonalize(double prec, OrbitalVector &Phi, ComplexMatrix &F, OrbitalVector &Psi);
 ComplexMatrix orthonormalize(double prec, OrbitalVector &Phi, ComplexMatrix &F);
 ComplexMatrix orthonormalize_ASC(double prec, OrbitalVector &Phi_L, ComplexMatrix &F, ASCOperator &X);
 ComplexMatrix kramers_orthonormalize(double prec, OrbitalVector &Phi, ComplexMatrix &F);

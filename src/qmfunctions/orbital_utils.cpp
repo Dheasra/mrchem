@@ -601,6 +601,47 @@ ComplexMatrix orbital::diagonalize(double prec, OrbitalVector &Phi, ComplexMatri
     return U;
 }
 
+/** @brief Perform the orbital rotation that diagonalizes the Fock matrix
+ *
+ * @param Phi: orbitals to rotate
+ * @param F: Fock matrix to diagonalize
+ * @param Psi: orbitals that contribute to the rotation but don't rotate (For instance, Kramers' partners, small components, etc )
+ *
+ * The resulting transformation includes the orthonormalization of the orbitals.
+ * Orbitals are rotated in place and Fock matrix is diagonalized in place.
+ * The transformation matrix is returned.
+ */
+ComplexMatrix orbital::diagonalize(double prec, OrbitalVector &Phi, ComplexMatrix &F, OrbitalVector &Psi) {
+    Timer t_tot;
+    auto plevel = Printer::getPrintLevel();
+    mrcpp::print::header(2, "Diagonalizing Fock matrix");
+
+    ComplexMatrix S = orbital::calc_overlap_matrix(Phi, Phi)
+                + orbital::calc_overlap_matrix(Psi, Psi); 
+
+    ComplexMatrix S_m12 = math_utils::hermitian_matrix_pow(S, -0.5);   // same utility kramers_orthonormalize already uses
+    F = S_m12.adjoint() * F * S_m12;
+
+    Timer diag_t;
+    ComplexMatrix U = ComplexMatrix::Zero(F.rows(), F.cols());
+    int np = orbital::size_paired(Phi);
+    int na = orbital::size_alpha(Phi);
+    int nb = orbital::size_beta(Phi);
+    if (np > 0) math_utils::diagonalize_block(F, U, 0, np);
+    if (na > 0) math_utils::diagonalize_block(F, U, np, na);
+    if (nb > 0) math_utils::diagonalize_block(F, U, np + na, nb);
+    U = S_m12 * U;
+    mrcpp::print::time(2, "Diagonalizing matrix", diag_t);
+
+    Timer rot_t;
+    mrcpp::rotate(Phi, U, prec);
+    mrcpp::print::time(2, "Rotating orbitals", rot_t);
+
+    mrcpp::print::footer(2, t_tot, 2);
+    if (plevel == 1) mrcpp::print::time(1, "Diagonalizing Fock matrix", t_tot);
+    return U;
+}
+
 /** @brief Perform the Löwdin orthonormalization
  *
  * @param Phi: orbitals to orthonormalize

@@ -313,13 +313,14 @@ json GroundStateSolver::optimize(Molecule &mol, FockBuilder &F) {
         // HelmholtzVector H(helm_prec, F_mat.real().diagonal(), F.getLightSpeed(), apply_dirac_prop); //original
         ComplexMatrix L_mat = H.getLambdaMatrix();
         
+        F_mat = L_mat; //debug
         MSG_INFO("F_mat-L_mat" << F_mat - L_mat);
 
         // Apply Helmholtz operator
         OrbitalVector Psi = F.buildHelmholtzArgument(orb_prec, Phi_n, F_mat, L_mat);
         OrbitalVector Phi_np1 = H(Psi, apply_dirac_prop);
         Psi.clear();
-        F.clear();
+        F.clear(); //Note: doesn't clear chi if isX2C, which is how it should be here
         // Orthonormalize
         if (F.isX2C()){ //maybe this could be done more elegantly, but for now it is how it is
             auto asc = std::dynamic_pointer_cast<ASCOperator>(F.getCouplingOperator());
@@ -376,7 +377,16 @@ json GroundStateSolver::optimize(Molecule &mol, FockBuilder &F) {
         if (deltaSCFMethod == "MOM")
             Phi_mom = orbital::deep_copy(Phi_n);
 
-        orbital::orthonormalize(orb_prec, Phi_n, F_mat);
+        // orbital::orthonormalize(orb_prec, Phi_n, F_mat); //original
+        if (F.isX2C()){ //maybe this could be done more elegantly, but for now it is how it is
+            auto asc = std::dynamic_pointer_cast<ASCOperator>(F.getCouplingOperator());
+            if (!asc) MSG_ABORT("isX2C() true but chi is not an ASCOperator");
+            MSG_INFO("proutproutprout");
+            orbital::orthonormalize_ASC(orb_prec, Phi_n, F_mat, *asc);
+            MSG_INFO("proutproutprout2");
+        } else {
+            orbital::orthonormalize(orb_prec, Phi_n, F_mat); //TODO: maybe add a path to enforce Kramers symmetry when restricted and 2c
+        }
 
         // Compute Fock matrix and energy
         if (F.getReactionOperator() != nullptr) F.getReactionOperator()->updateMOResidual(err_t);
@@ -398,11 +408,21 @@ json GroundStateSolver::optimize(Molecule &mol, FockBuilder &F) {
 
         // Rotate orbitals
         if (needLocalization(nIter, converged)) {
+            if (F.isX2C()) MSG_WARN("NOT IMPLEMENTED, SMALL COMPONENT DISCARDED IN LOCALISATION COMPUTATION");
             ComplexMatrix U_mat = orbital::localize(orb_prec, Phi_n, F_mat);
             F.rotate(U_mat);
             kain.clear();
         } else if (needDiagonalization(nIter, converged)) {
-            ComplexMatrix U_mat = orbital::diagonalize(orb_prec, Phi_n, F_mat);
+            ComplexMatrix U_mat;
+            if (F.isX2C()){
+                MSG_INFO("Diagonalisation X2C")
+                auto asc = std::dynamic_pointer_cast<ASCOperator>(F.getCouplingOperator());
+                if (!asc) MSG_ABORT("isX2C() true but chi is not an ASCOperator");
+                OrbitalVector Psi = (*asc)(Phi_n);
+                U_mat = orbital::diagonalize(orb_prec, Phi_n, F_mat, Psi);
+            } else {
+                U_mat = orbital::diagonalize(orb_prec, Phi_n, F_mat);
+            }
             F.rotate(U_mat);
             kain.clear();
         }
