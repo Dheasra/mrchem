@@ -210,6 +210,8 @@ std::shared_ptr<mrcpp::CompFunctionVector> project_small_spinor_set(const Nuclei
     return spinors;
 }
 
+/** @brief constructor from  MW trees
+ */
 ASCOperator::ASCOperator(const Nuclei &nucs, const std::vector<std::string> &large_tree_paths, const std::vector<std::string> &small_tree_paths, double proj_prec, double screen, double coeff_thrs) {
     // Timer timer;
     
@@ -281,7 +283,8 @@ ASCOperator::ASCOperator(const Nuclei &nucs, const std::vector<std::string> &lar
     // mrcpp::print::time(2, "Gaussian coupling operator (small component, N=" + std::to_string(this->small->size()) + ")", timer);
 }
 
-
+/** @brief constructor from Gaussian bases. For now, it expects the output of the python scripts held in MRCHEM/python/DIRAC-to-trees_scripts.
+ */
 ASCOperator::ASCOperator(const Nuclei &nucs, const std::vector<std::string> &large_bas_files, const std::vector<std::string> &large_coef_files, const std::vector<std::string> &small_coef_files, double proj_prec, double screen, double coeff_thrs) {
     Timer timer;
     this->large = project_large_spinor_set(nucs, large_bas_files, large_coef_files, proj_prec, screen, coeff_thrs);
