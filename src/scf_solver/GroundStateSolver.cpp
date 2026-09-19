@@ -311,6 +311,7 @@ json GroundStateSolver::optimize(Molecule &mol, FockBuilder &F) {
         OrbitalVector Phi_np1 = H(Psi, apply_dirac_prop);
         Psi.clear();
         F.clear(); //Note: doesn't clear chi if isX2C, which is how it should be here
+        MSG_INFO("Helmholtz update large comp overlap="<< orbital::calc_overlap_matrix(Phi_np1));
         // Orthonormalize
         if (F.isX2C()){ //maybe this could be done more elegantly, but for now it is how it is
             auto asc = std::dynamic_pointer_cast<ASCOperator>(F.getCouplingOperator());

@@ -1,103 +1,27 @@
-# import h5py
-# import numpy as np
-
-# OCC_COL = 9  # occupied H 1s spinor, 0-indexed into the 18 mobasis columns
-
-
-# def write_complex_matrix_file(path, C):
-#     """C: complex ndarray (nRows, nCols). Matches math_utils::read_complex_matrix_file:
-#     'nRows nCols' header, then one 'real imag' per line, column-major fill."""
-#     nrows, ncols = C.shape
-#     with open(path, "w") as out:
-#         out.write(f"{nrows} {ncols}\n")
-#         for i in range(ncols):
-#             for j in range(nrows):
-#                 out.write(f"{C[j, i].real:.14e} {C[j, i].imag:.14e}\n")
-
-
-# def main():
-#     with h5py.File("H.h5", "r") as f:
-#         orb = f["result/wavefunctions/scf/mobasis/orbitals"][()]
-#         n_basis = int(f["result/wavefunctions/scf/mobasis/n_basis"][0])
-#         n_mo = int(f["result/wavefunctions/scf/mobasis/n_mo"][0])
-#         nz = int(f["result/wavefunctions/scf/mobasis/nz"][0])
-#         n_ao_large = int(f["input/aobasis/1/n_ao"][0])
-#         n_ao_small = int(f["input/aobasis/2/n_ao"][0])
-
-#     assert nz == 4
-#     q = orb.reshape((n_basis, n_mo, nz), order="F")
-
-#     # validated extraction: alpha channel = q0 + i*q1, beta channel = 0
-#     # (see conversation: confirmed against the AO overlap matrix, norm = 0.999991;
-#     #  q2/q3 are exactly zero for the large-component rows of this column, consistent
-#     #  with a single-Kramers-partner / single-spin-channel kappa=-1 (s_1/2) state)
-#     c_all = q[:, OCC_COL, 0] + 1j * q[:, OCC_COL, 1]
-
-#     c_large = c_all[:n_ao_large]                        # DIRAC order == our order (both from aobasis/1 directly)
-#     c_small_dirac = c_all[n_ao_large:n_ao_large + n_ao_small]  # DIRAC order: [s(1), p(18), d(6 Cartesian)]
-
-#     # DIRAC stores the d-shell as 6 Cartesian components (schema: angular=1), but our
-#     # OrbitalExp always spherical-transforms Cartesian shells on read (Cartesian d -> 5
-#     # spherical), so our small-component AO count is 24, not 25. Verified the 6 raw
-#     # Cartesian d-coefficients for this spinor are all ~1e-15 (machine zero -- this state's
-#     # large component has no p-character, so its RKB-generated d-shell partner carries no
-#     # weight), so any 6->5 reduction is safe here without implementing the actual
-#     # Cartesian->spherical transform: just drop one of the six zero entries.
-#     d_block = c_small_dirac[19:25]
-#     assert np.max(np.abs(d_block)) < 1e-10, "d-shell not negligible, need real Cartesian->spherical transform"
-
-#     # permute DIRAC's [s, p x6, d(5 after drop)] into our generate_rkb_basis order [p x6, s, d]
-#     n_ao_small_sph = n_ao_small - 1  # 24: Cartesian d (6) -> spherical d (5)
-#     c_small = np.empty(n_ao_small_sph, dtype=complex)
-#     c_small[0:18] = c_small_dirac[1:19]   # the 6 p-blocks (from the 6 large s-shells)
-#     c_small[18] = c_small_dirac[0]        # the s (from the large p-shell)
-#     c_small[19:24] = d_block[0:5]         # the d (from the large p-shell), 5 of the 6 zero entries
-
-#     # build the (2*N_ao x N_ao) files our GaussCouplingOperator expects.
-#     # Only ONE column (0) holds real data (the occupied spinor); the other 8 are
-#     # placeholder zeros -- the p-character virtuals were NOT reliably extractable
-#     # (see conversation), so they are intentionally left blank rather than wrong.
-#     C_large = np.zeros((2 * n_ao_large, n_ao_large), dtype=complex)
-#     C_large[0:n_ao_large, 0] = c_large          # alpha
-#     # beta rows [n_ao_large:2*n_ao_large, 0] stay zero
-
-#     C_small = np.zeros((2 * n_ao_small_sph, n_ao_small_sph), dtype=complex)
-#     C_small[0:n_ao_small_sph, 0] = c_small      # alpha
-#     # beta rows 
-#     C_small_beta = q[:, OCC_COL, 2] + 1j * q[:, OCC_COL, 3]
-#     C_small[n_ao_small_sph:, 0] = -np.conj(C_small_beta)
-
-#     write_complex_matrix_file("H_large.coef", C_large)
-#     write_complex_matrix_file("H_small.coef", C_small)
-#     print(f"wrote H_large.coef {C_large.shape}, H_small.coef {C_small.shape}")
-#     print("column 0 is the only physically meaningful spinor; columns 1-8 are zero placeholders")
-
-
-# if __name__ == "__main__":
-#     main()
-
-"""Convert one occupied DIRAC 4C spinor (H atom, C1 symmetry) into the coefficient files read by ASCOperator.
+"""Convert all positive-energy DIRAC 4C spinors of an atom (C1 symmetry) into the coefficient files read by ASCOperator.
 
 Reads the DIRAC checkpoint H.h5 and writes two text files:
-    H_large.coef   coefficients of the spinor on the large-component AO basis
-    H_small.coef   coefficients of the spinor on the small-component AO basis (restricted kinetic balance)
+    H_large.coef   coefficients of every atomic spinor on the large-component AO basis
+    H_small.coef   coefficients of every atomic spinor on the small-component AO basis (restricted kinetic balance)
 
-Each file is a complex matrix of shape (2*N_ao, N_ao), see write_complex_matrix_file(). Column i is
-the i-th spinor. Rows [0, N_ao) are the alpha (spin-up) AO coefficients and rows [N_ao, 2*N_ao) are
-the beta (spin-down) AO coefficients. Only column 0 is filled (the occupied spinor), the other columns are zero.
+Each file is a complex matrix of shape (2*N_ao, N_spinors). Column i is the i-th spinor. Rows
+[0, N_ao) are the alpha (spin-up) AO coefficients and rows [N_ao, 2*N_ao) are the beta (spin-down)
+AO coefficients. The two files list the spinors in the same order, and their large components span
+the whole large AO space of the atom, which is what ASCOperator needs to build X = sum |phiS_i><phiL_i|.
 
-Only the occupied spinor is converted. The quaternion -> complex reconstruction below is validated
-for that column only (see quaternion_to_spinor()).
+AOs are kept Cartesian (as stored by DIRAC: 6 d, 10 f, ...). The C++ side must not convert them to real
+solid harmonics (ASCOperator reads them with OrbitalExp(intgrl, /*spherical=*/false)), because the small
+component of a p_1/2 spinor lives entirely in the r^2 exp(-a r^2) function that spherical d functions drop.
 """
 
 import h5py
 import numpy as np
 
-## Index (0-based, among the n_mo columns of the DIRAC mobasis) of the occupied 1s_1/2 spinor of H
-OCC_COL = 9
-
 ## Coefficients with a smaller modulus are set to zero (removes ~1e-15 numerical noise from DIRAC)
 NOISE_THRESHOLD = 1.0e-12
+
+## Largest tolerated deviation of the spinor Gram matrix from the identity
+ORTHONORMALITY_TOL = 1.0e-10
 
 
 def write_complex_matrix_file(path, C):
@@ -117,123 +41,188 @@ def write_complex_matrix_file(path, C):
                 out.write(f"{C[j, i].real:.14e} {C[j, i].imag:.14e}\n")
 
 
-def quaternion_to_spinor(q):
-    """Convert the quaternion AO coefficients of one DIRAC spinor to complex alpha/beta coefficients.
+def read_ao_overlap(f, n_ao):
+    """Read the AO overlap matrix stored by DIRAC (packed upper triangle, column by column).
 
-    DIRAC stores each coefficient as a quaternion q0 + q1 i + q2 j + q3 k (q[:, 0..3]). Writing it as
-    A + B j with A = q0 + i q1 and B = q2 + i q3, the spin-up member of the Kramers pair (the spinor
-    stored in column 2j-1 of DIRAC's QTOC routine) has
+    @param f     open h5py.File of the DIRAC checkpoint
+    @param n_ao  total number of AOs (large + small)
+    @return      real symmetric ndarray (n_ao, n_ao); its large-small block is zero
+    """
+    packed = f["result/operators/ao_matrices/OVERLAP TFFT"][()]
+    S = np.zeros((n_ao, n_ao))
+    for j in range(n_ao):
+        for i in range(j + 1):
+            S[i, j] = S[j, i] = packed[j * (j + 1) // 2 + i]
+    return S
 
-        alpha_mu = A_mu                 (spin-up AO coefficient)
-        beta_mu  = -conj(B_mu)          (spin-down AO coefficient, ITIM = +1)
 
-    The sign and the complex conjugation of beta were validated against restricted kinetic balance
-    (see check_kinetic_balance()), and the large-component beta comes out ~0 as expected for a
-    real 1s spin-up large component.
+def quaternion_to_spinors(q):
+    """Convert the quaternion AO coefficients of one stored DIRAC MO into its two Kramers-partner spinors.
+
+    DIRAC stores each coefficient as a quaternion q0 + q1 i + q2 j + q3 k (q[:, 0..3]) and each stored MO
+    stands for a Kramers pair. Writing the quaternion as A + B j with A = q0 + i q1 and B = q2 + i q3, the two
+    complex 2-component spinors are (see the QTOC routine of DIRAC, ITIM = +1):
+
+        member 1:  alpha = A          beta = -conj(B)
+        member 2:  alpha = B          beta = +conj(A)
+
+    Both members are normalized and mutually orthogonal (checked against the AO overlap in main()).
 
     @param q  ndarray (n_ao, 4), quaternion coefficients of one MO over all AOs (large then small)
-    @return   (alpha, beta), two complex ndarrays of shape (n_ao,)
+    @return   list of two (alpha, beta) tuples, complex ndarrays of shape (n_ao,)
     """
     A = q[:, 0] + 1j * q[:, 1]
     B = q[:, 2] + 1j * q[:, 3]
-    return A, -np.conj(B)
+    return [(A, -np.conj(B)), (B, np.conj(A))]
 
 
-def to_our_small_ordering(c_small_dirac, n_ao_small_sph):
-    """Reorder the small-component coefficients of one spin channel from DIRAC's AO order to ours.
+def read_shells(f, group):
+    """Read the shell structure of one DIRAC AO basis.
 
-    Restricted kinetic balance maps the large basis (6 s-shells + 1 p-shell) onto small AOs:
-        DIRAC order : [ s (1), p (6 shells x 3: x,y,z), d (6 Cartesian) ]   -> 25 functions
-        our order   : [ p (6 shells x 3: x,y,z), s (1), d (5 spherical) ]   -> 24 functions
-    (our order comes from gto_utils::generate_rkb_basis(): for each large shell in turn, first the
-    l+1 small shell, then the l-1 one).
-
-    OrbitalExp always converts Cartesian d to 5 spherical d functions on read. The 6 Cartesian d
-    coefficients of this spinor are all zero (the small d shell is generated by the large p shell,
-    which is empty for this s-type spinor), so dropping one of them is exact here.
-
-    @param c_small_dirac   complex ndarray (25,), one spin channel in DIRAC order
-    @param n_ao_small_sph  number of small AOs on our side (24)
-    @return                complex ndarray (24,) in our order
+    @param f      open h5py.File
+    @param group  "input/aobasis/1" (large) or "input/aobasis/2" (small)
+    @return       list of (l, exponent) per shell, in DIRAC order (all shells here are uncontracted)
     """
-    d_block = c_small_dirac[19:25]
-    assert np.max(np.abs(d_block)) < NOISE_THRESHOLD, "d-shell not negligible, need a real Cartesian->spherical transform"
-
-    c_small = np.empty(n_ao_small_sph, dtype=complex)
-    c_small[0:18] = c_small_dirac[1:19]  # 6 p-shells generated by the 6 large s-shells
-    c_small[18] = c_small_dirac[0]       # s-shell generated by the large p-shell
-    c_small[19:24] = d_block[0:5]        # d-shell generated by the large p-shell (all zero here)
-    return c_small
+    orbmom = f[group + "/orbmom"][()]      # DIRAC stores l + 1
+    expo = f[group + "/exponents"][()]
+    n_cont = f[group + "/n_cont"][()]
+    n_prim = f[group + "/n_prim"][()]
+    assert np.all(n_cont == 1) and np.all(n_prim == 1), "only uncontracted shells are supported"
+    return [(int(l) - 1, float(e)) for l, e in zip(orbmom, expo)]
 
 
-def check_kinetic_balance(alpha_small, beta_small, atol_rel=1.0e-6):
-    """Check that the small component satisfies kinetic balance for a real spin-up s large component.
+def n_cartesian(l):
+    """Number of Cartesian AOs of angular momentum l: (l+1)(l+2)/2."""
+    return (l + 1) * (l + 2) // 2
 
-    For a real large component f(r) in the alpha channel, psi_S = -i/(2c) (sigma.p) psi_L gives
-        S_alpha ~ z g(r)          (p_z AO only)
+
+def shell_offsets(shells):
+    """First AO index of every shell.
+
+    @param shells  list of (l, exponent)
+    @return        list of offsets, and the total number of AOs
+    """
+    offsets, n = [], 0
+    for l, _ in shells:
+        offsets.append(n)
+        n += n_cartesian(l)
+    return offsets, n
+
+
+def rkb_small_shell_order(large_shells, dirac_small_shells):
+    """Permutation from the DIRAC small-component AO order to the order built by gto_utils::generate_rkb_basis().
+
+    generate_rkb_basis() loops over the large shells in order and, for each shell of angular momentum l, appends
+    a small shell with l+1 and then (if l > 0) a small shell with l-1, both with the exponent of the large shell.
+    DIRAC lists the same shells in its own order, so every shell is located by (l, exponent).
+
+    @param large_shells        list of (l, exponent) of the large basis
+    @param dirac_small_shells  list of (l, exponent) of the DIRAC small basis
+    @return                    (perm, our_shells): perm[k] is the DIRAC AO index of our small AO k,
+                               our_shells is the list of (l, exponent) in our order
+    """
+    offsets, n_dirac = shell_offsets(dirac_small_shells)
+    used = [False] * len(dirac_small_shells)
+    perm, our_shells = [], []
+    for l, e in large_shells:
+        wanted = [l + 1] + ([l - 1] if l > 0 else [])
+        for lw in wanted:
+            idx = next(k for k, (ls, es) in enumerate(dirac_small_shells) if not used[k] and ls == lw and abs(es - e) < 1e-8)
+            used[idx] = True
+            perm.extend(range(offsets[idx], offsets[idx] + n_cartesian(lw)))
+            our_shells.append((lw, e))
+    assert all(used), "DIRAC small basis contains shells that RKB does not generate"
+    assert len(perm) == n_dirac
+    return np.array(perm), our_shells
+
+
+def check_ground_state_kinetic_balance(alpha_small, beta_small, our_shells, atol_rel=1.0e-6):
+    """Check the sign/conjugation of beta for a real spin-up s large component (the lowest spinor).
+
+    For psi_S = -i/(2c) (sigma.p) psi_L with psi_L real and in the alpha channel,
+        S_alpha ~ z g(r)          (p_z AOs only)
         S_beta  ~ (x + i y) g(r)  (p_x and p_y AOs)
-    so in every p-shell the coefficients must obey
+    so in every small p shell (AO order x, y, z):
         alpha_px = alpha_py = beta_pz = 0,  beta_px = alpha_pz,  beta_py = i alpha_pz.
-    This fixes the sign and conjugation of beta relative to alpha, and the (x, y, z) order of the
-    p AOs inside a shell.
 
-    @param alpha_small  complex ndarray (24,), spin-up small coefficients in our order
-    @param beta_small   complex ndarray (24,), spin-down small coefficients in our order
-    @param atol_rel     tolerance relative to the largest |alpha_pz| of the 6 p-shells
+    @param alpha_small, beta_small  complex ndarrays, small-component coefficients in our AO order
+    @param our_shells               list of (l, exponent) in our AO order
+    @param atol_rel                 tolerance relative to the largest |alpha_pz|
     """
-    scale = max(abs(alpha_small[3 * j + 2]) for j in range(6))
+    offsets, _ = shell_offsets(our_shells)
+    p_offsets = [o for o, (l, _) in zip(offsets, our_shells) if l == 1]
+    scale = max(abs(alpha_small[o + 2]) for o in p_offsets)
     tol = atol_rel * scale
-    for j in range(6):
-        ax, ay, az = alpha_small[3 * j:3 * j + 3]
-        bx, by, bz = beta_small[3 * j:3 * j + 3]
-        assert abs(ax) < tol and abs(ay) < tol and abs(bz) < tol, f"p-shell {j}: unexpected nonzero coefficient"
-        assert abs(bx - az) < tol, f"p-shell {j}: beta_px != alpha_pz"
-        assert abs(by - 1j * az) < tol, f"p-shell {j}: beta_py != i alpha_pz"
+    for o in p_offsets:
+        ax, ay, az = alpha_small[o:o + 3]
+        bx, by, bz = beta_small[o:o + 3]
+        assert abs(ax) < tol and abs(ay) < tol and abs(bz) < tol, f"p shell at AO {o}: unexpected nonzero coefficient"
+        assert abs(bx - az) < tol, f"p shell at AO {o}: beta_px != alpha_pz"
+        assert abs(by - 1j * az) < tol, f"p shell at AO {o}: beta_py != i alpha_pz"
 
 
 def main():
     with h5py.File("H.h5", "r") as f:
-        orb = f["result/wavefunctions/scf/mobasis/orbitals"][()]
-        n_basis = int(f["result/wavefunctions/scf/mobasis/n_basis"][0])  # large + small AOs (34)
-        n_mo = int(f["result/wavefunctions/scf/mobasis/n_mo"][0])        # number of MOs (18)
-        nz = int(f["result/wavefunctions/scf/mobasis/nz"][0])            # quaternion components (4)
-        n_ao_large = int(f["input/aobasis/1/n_ao"][0])                   # 9
-        n_ao_small = int(f["input/aobasis/2/n_ao"][0])                   # 25 (Cartesian d)
+        mo = f["result/wavefunctions/scf/mobasis"]
+        orb = mo["orbitals"][()]
+        n_basis = int(mo["n_basis"][0])   # large + small AOs
+        n_mo = int(mo["n_mo"][0])         # stored MOs (Kramers pairs), negative-energy ones first
+        n_po = int(mo["n_po"][0])         # number of negative-energy (positronic) stored MOs
+        nz = int(mo["nz"][0])             # quaternion components (4)
+        eps = mo["eigenvalues"][()]
+        large_shells = read_shells(f, "input/aobasis/1")
+        dirac_small_shells = read_shells(f, "input/aobasis/2")
+        S = read_ao_overlap(f, n_basis)
 
     assert nz == 4
+    assert [l for l, _ in large_shells] == sorted(l for l, _ in large_shells), \
+        "large shells must be ordered by angular momentum (as written by h5_to_bas.py)"
+    _, n_ao_large = shell_offsets(large_shells)
+    perm, our_small_shells = rkb_small_shell_order(large_shells, dirac_small_shells)
+    n_ao_small = len(perm)
+    assert n_ao_large + n_ao_small == n_basis
 
-    # q[ao, mo, k]: k-th quaternion component of the coefficient of AO `ao` in MO `mo` (Fortran order)
+    # q[ao, mo, k]: k-th quaternion component of the coefficient of AO `ao` in stored MO `mo` (Fortran order)
     q = orb.reshape((n_basis, n_mo, nz), order="F")
-    alpha, beta = quaternion_to_spinor(q[:, OCC_COL, :])
 
-    # zero out numerical noise, keep the physical (~1e-4 and larger) coefficients
-    alpha[np.abs(alpha) < NOISE_THRESHOLD] = 0.0
-    beta[np.abs(beta) < NOISE_THRESHOLD] = 0.0
+    # every positive-energy stored MO gives two Kramers-partner spinors
+    spinors, energies = [], []
+    for col in range(n_po, n_mo):
+        for alpha, beta in quaternion_to_spinors(q[:, col, :]):
+            spinors.append((alpha, beta))
+            energies.append(eps[col])
+    n_spin = len(spinors)
 
-    # large component: DIRAC order == our order (both come from aobasis/1)
-    alpha_large = alpha[:n_ao_large]
-    beta_large = beta[:n_ao_large]
+    # validation: the spinors must be orthonormal in the AO overlap metric (alpha and beta share S)
+    G = np.array([[np.vdot(a1, S @ a2) + np.vdot(b1, S @ b2) for (a2, b2) in spinors] for (a1, b1) in spinors])
+    dev = np.max(np.abs(G - np.eye(n_spin)))
+    assert dev < ORTHONORMALITY_TOL, f"spinors are not orthonormal (max deviation {dev:.2e})"
 
-    # small component: 25 Cartesian AOs in DIRAC order -> 24 spherical AOs in our order
-    n_ao_small_sph = n_ao_small - 1
-    alpha_small = to_our_small_ordering(alpha[n_ao_large:], n_ao_small_sph)
-    beta_small = to_our_small_ordering(beta[n_ao_large:], n_ao_small_sph)
-    check_kinetic_balance(alpha_small, beta_small)
+    C_large = np.zeros((2 * n_ao_large, n_spin), dtype=complex)
+    C_small = np.zeros((2 * n_ao_small, n_spin), dtype=complex)
+    for i, (alpha, beta) in enumerate(spinors):
+        # large AOs: DIRAC order == our order (both from aobasis/1)
+        C_large[0:n_ao_large, i] = alpha[:n_ao_large]
+        C_large[n_ao_large:, i] = beta[:n_ao_large]
+        # small AOs: DIRAC order -> RKB order of generate_rkb_basis()
+        C_small[0:n_ao_small, i] = alpha[n_ao_large:][perm]
+        C_small[n_ao_small:, i] = beta[n_ao_large:][perm]
 
-    # (2*N_ao x N_ao) coefficient matrices: column 0 = occupied spinor, other columns stay zero
-    C_large = np.zeros((2 * n_ao_large, n_ao_large), dtype=complex)
-    C_large[0:n_ao_large, 0] = alpha_large
-    C_large[n_ao_large:2 * n_ao_large, 0] = beta_large
+    C_large[np.abs(C_large) < NOISE_THRESHOLD] = 0.0
+    C_small[np.abs(C_small) < NOISE_THRESHOLD] = 0.0
 
-    C_small = np.zeros((2 * n_ao_small_sph, n_ao_small_sph), dtype=complex)
-    C_small[0:n_ao_small_sph, 0] = alpha_small
-    C_small[n_ao_small_sph:2 * n_ao_small_sph, 0] = beta_small
+    # the lowest spinor is the 1s_1/2 ground state, for which beta follows from kinetic balance
+    check_ground_state_kinetic_balance(C_small[0:n_ao_small, 0], C_small[n_ao_small:, 0], our_small_shells)
 
     write_complex_matrix_file("H_large.coef", C_large)
     write_complex_matrix_file("H_small.coef", C_small)
     print(f"wrote H_large.coef {C_large.shape}, H_small.coef {C_small.shape}")
-    print(f"|alpha_small|^2 = {np.sum(np.abs(alpha_small)**2):.4e}, |beta_small|^2 = {np.sum(np.abs(beta_small)**2):.4e}")
-    print("column 0 is the only physically meaningful spinor; columns 1..N-1 are zero placeholders")
+    print(f"max deviation of the spinor Gram matrix from identity: {dev:.2e}")
+    print("spinor  energy          <L|L>      <S|S>")
+    for i, (alpha, beta) in enumerate(spinors):
+        nl = np.real(np.vdot(alpha[:n_ao_large], S[:n_ao_large, :n_ao_large] @ alpha[:n_ao_large]) + np.vdot(beta[:n_ao_large], S[:n_ao_large, :n_ao_large] @ beta[:n_ao_large]))
+        ns = np.real(np.vdot(alpha[n_ao_large:], S[n_ao_large:, n_ao_large:] @ alpha[n_ao_large:]) + np.vdot(beta[n_ao_large:], S[n_ao_large:, n_ao_large:] @ beta[n_ao_large:]))
+        print(f"{i:4d}  {energies[i]:12.6f}  {nl:9.6f}  {ns:.4e}")
 
 
 if __name__ == "__main__":

@@ -657,7 +657,9 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
     Timer t_pot;
     //compute X2C correction term c^{-1}(σ·p)VR|ψ>
     OrbitalVector termTwo = (*asc)(Phi);
+    MSG_INFO("Xphi_L = phi_S norm="<< termTwo[0].norm());
     termTwo = V(termTwo);
+    MSG_INFO("VXphi_L = Vphi_S norm="<< termTwo[0].norm());
     for (int i = 0; i < Phi.size(); i++) {
         if (!mrcpp::mpi::my_func(i)) continue;
         // apply (σ_d p_d) to |VRψ> 
@@ -673,6 +675,7 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
     }
     
     OrbitalVector termOne = V(Phi);//compute first term EV|ψ>
+    MSG_INFO("Vphi_L norm="<< termOne[0].norm());
     for (int i = 0; i < Phi.size(); i++) {
         if (!mrcpp::mpi::my_func(i)) continue;
         MSG_INFO("epsilon energy="<<eps[i]);

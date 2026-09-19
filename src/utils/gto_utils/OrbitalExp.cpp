@@ -42,9 +42,9 @@ using mrcpp::Gaussian;
 namespace mrchem {
 namespace gto_utils {
 
-OrbitalExp::OrbitalExp(Intgrl &intgrl)
+OrbitalExp::OrbitalExp(Intgrl &intgrl, bool spherical)
         : cartesian(true) {
-    readAOExpansion(intgrl);
+    readAOExpansion(intgrl, spherical);
 }
 
 OrbitalExp::~OrbitalExp() {
@@ -125,7 +125,7 @@ void OrbitalExp::rotate(const DoubleMatrix &U) {
     }
 }
 
-void OrbitalExp::readAOExpansion(Intgrl &intgrl) {
+void OrbitalExp::readAOExpansion(Intgrl &intgrl, bool spherical) {
     for (int i = 0; i < intgrl.getNNuclei(); i++) {
         Nucleus &nuc = intgrl.getNucleus(i);
         AOBasis &aoBasis = intgrl.getAOBasis(i);
@@ -134,7 +134,7 @@ void OrbitalExp::readAOExpansion(Intgrl &intgrl) {
             this->orbitals.push_back(ao);
         }
     }
-    transformToSpherical();
+    if (spherical) transformToSpherical();
 }
 
 /**

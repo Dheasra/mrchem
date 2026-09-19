@@ -43,7 +43,7 @@ struct CartToSphTransformation {
 
 class OrbitalExp final {
 public:
-    OrbitalExp(Intgrl &intgrl);
+    OrbitalExp(Intgrl &intgrl, bool spherical = true);
     ~OrbitalExp();
 
     int size() const { return this->orbitals.size(); }
@@ -61,7 +61,7 @@ protected:
 
     std::vector<CartToSphTransformation> sph_transformation_data;
 
-    void readAOExpansion(Intgrl &intgrl);
+    void readAOExpansion(Intgrl &intgrl, bool spherical);
     void transformToSpherical();
 
     CartToSphTransformation &getSphTransformation(int l);

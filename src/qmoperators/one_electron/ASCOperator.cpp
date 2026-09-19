@@ -121,12 +121,16 @@ std::shared_ptr<mrcpp::CompFunctionVector> project_molecular_spinor_set(const Nu
 // Project one atom's (already positioned) AO basis into MW space once, cache it into ao_real, and
 // append its block-diagonal contribution (spinors built only from this atom's own AOs) to spinors.
 void add_atom_spinors(gto_utils::Intgrl &intgrl, const std::string &coef_file, double proj_prec, double screen, double coeff_thrs, std::vector<mrcpp::CompFunction<3>> &ao_real, mrcpp::CompFunctionVector &spinors) {
-    gto_utils::OrbitalExp ao_exp(intgrl);
+    // Cartesian AOs (6 d, 10 f, ...): the coefficient files use the DIRAC AO layout, and the restricted
+    // kinetic balance small basis needs the r^2 exp(-a r^2) function that real solid harmonics drop.
+    gto_utils::OrbitalExp ao_exp(intgrl, false);
     int nAO = ao_exp.size();
 
+    // (2*nAO x nSpinors): rows [0,nAO) alpha AO coefficients, rows [nAO,2*nAO) beta; one column per atomic spinor
     ComplexMatrix C = math_utils::read_matrix_file_cplx(coef_file);
     MSG_INFO("C(0,0) for " << coef_file << " = " << C(0,0)); 
-    if (C.rows() != 2 * nAO || C.cols() != nAO) MSG_ABORT("Coupling coefficient matrix must be (2*" << nAO <<" x " << nAO <<"), current format= (" << C.rows()<< " x "<< C.cols()<<")");
+    if (C.rows() != 2 * nAO) MSG_ABORT("Coupling coefficient matrix must have 2*" << nAO << " rows, current format= (" << C.rows() << " x " << C.cols() << ")");
+    int nSpinors = C.cols();
 
     int offset = ao_real.size();
     for (int j = 0; j < nAO; j++) {
@@ -139,9 +143,10 @@ void add_atom_spinors(gto_utils::Intgrl &intgrl, const std::string &coef_file, d
     }
     MSG_INFO("ao_real[0] norm = " << ao_real[offset].real().getSquareNorm());
 
-    for (int i = 0; i < nAO; i++) {
+    for (int i = 0; i < nSpinors; i++) {
         mrcpp::CompFunction<3> spinor(0, false, 2);
         spinor.defcomplex();
+        bool empty_spinor = true; // Keeps track of a spinor being empty or not, to avoid pushing placeholder(zero)-valued spinors to the expansion. Should prevent a size mismatch between large and small components 
         for (int c = 0; c < 2; c++) {
             std::vector<ComplexDouble> coefs;
             std::vector<mrcpp::CompFunction<3>> terms;
@@ -157,6 +162,7 @@ void add_atom_spinors(gto_utils::Intgrl &intgrl, const std::string &coef_file, d
                 spinor.complex(c); // lazily allocates a zero-valued component
                 continue;
             }
+            empty_spinor = false; //spinor has coefficients
             mrcpp::CompFunction<3> psi_c;
             MSG_INFO("i=" << i << " c=" << c << " coefs.size()=" << coefs.size() << " terms.size()=" << terms.size());
             mrcpp::linear_combination(psi_c, coefs, terms, proj_prec);
@@ -171,6 +177,9 @@ void add_atom_spinors(gto_utils::Intgrl &intgrl, const std::string &coef_file, d
             psi_c.CompC[0] = nullptr; // ownership transferred to spinor, avoid double free
             spinor.calcSquareNorm();
         }
+        // Placeholder columns must not enter the set: X = sum_i |phiS_i><phiL_i| pairs the large and
+        // small sets by index, and the large (N_AO) and small (N_AO_small) AO counts differ.
+        if (empty_spinor) continue;
         spinors.push_back(spinor);
     }
 }
@@ -294,6 +303,66 @@ ASCOperator::ASCOperator(const Nuclei &nucs, const std::vector<std::string> &lar
     ComplexMatrix SL = mrcpp::calc_overlap_matrix(*(this->large));
     ComplexMatrix U = math_utils::hermitian_matrix_pow(SL, -1.0);
     mrcpp::rotate(*(this->large), U, proj_prec);
+
+    if (large->size() != small->size()) MSG_ABORT("Large and small component size mismatch! Nbr of Large=" << large->size() << ", Nbr of small="<< small->size());
+
+    // //debug
+    // //===================================
+    // std::vector<ComplexDouble> imag1(2);
+    // imag1[0] = {1.0, 0.0};
+    // imag1[1] = {0.0, 1.0}; //{{1.0,0.0}, {0.0, 1.0}}; //1, i
+    // std::vector<mrcpp::CompFunction<3>> large_comps(0);
+    // mrcpp::CompFunction<3> large_real;
+    // large_real.defreal();
+    // large_real.alloc(2, true);
+    // MSG_INFO("path_comp[0]="<<"/home/qpitto/DIRAC_runs/ReMRChem/Runs/H2/H2_Large_alpha_real");
+    // large_real.CompD[0]->loadTree("/home/qpitto/DIRAC_runs/ReMRChem/Runs/H2/H2_Large_alpha_real");
+    // MSG_INFO("a "<< large_real.CompD[0]->getNNodes());
+    // large_real.CompD[1]->loadTree("/home/qpitto/DIRAC_runs/ReMRChem/Runs/H2/H2_Large_beta_real");
+    // MSG_INFO("a1 "<< (large_real.CompD[1]->getNNodes()));
+    // // large_alpha_real.CompD[0]
+    // large_comps.push_back(large_real);
+
+    // MSG_INFO("b");
+    // mrcpp::CompFunction<3> large_imag;
+    // large_imag.defreal();
+    // large_imag.alloc(2, true);
+    // large_imag.CompD[0]->loadTree("/home/qpitto/DIRAC_runs/ReMRChem/Runs/H2/H2_Large_alpha_imag");
+    // large_imag.CompD[1]->loadTree("/home/qpitto/DIRAC_runs/ReMRChem/Runs/H2/H2_Large_beta_imag");
+    // large_comps.push_back(large_imag);
+    // mrcpp::CompFunction<3> large_tmp;
+    // large_tmp.defcomplex();
+    // large_tmp.alloc(2, true);
+    // mrcpp::linear_combination(large_tmp, imag1, large_comps, proj_prec, false);
+
+    // std::vector<mrcpp::CompFunction<3>> small_comps(0);
+    // MSG_INFO("c");
+    // this->large->push_back(large_tmp);
+    // MSG_INFO("d large ok path_small=" << small_tree_paths[i]+"_Small_alpha_real");
+    // MSG_INFO("d large ok path_Small=" << small_tree_paths[i]+"_Small_beta_real");
+    // mrcpp::CompFunction<3> small_real;
+    // small_real.defreal();
+    // small_real.alloc(2, true);
+    // small_real.CompD[0]->loadTree(small_tree_paths[i]+"_Small_alpha_real");
+    // small_real.CompD[1]->loadTree(small_tree_paths[i]+"_Small_beta_real");
+    // small_comps.push_back(small_real);
+    // // small_alpha_real.CompD[0]
+    // MSG_INFO("e");
+    // mrcpp::CompFunction<3> small_imag;
+    // small_imag.defreal();
+    // small_imag.alloc(2, true);
+    // small_imag.CompD[0]->loadTree(small_tree_paths[i]+"_Small_alpha_imag");
+    // small_imag.CompD[1]->loadTree(small_tree_paths[i]+"_Small_beta_imag");
+    // small_comps.push_back(small_imag);
+    // mrcpp::CompFunction<3> small_tmp;
+    // MSG_INFO("f");
+    // small_tmp.defcomplex();
+    // small_tmp.alloc(2, true);
+    // mrcpp::linear_combination(small_tmp, imag1, small_comps, proj_prec,false);
+    // this->small->push_back(small_tmp);
+    // MSG_INFO("g end");
+
+    // //?===================================
 
     mrcpp::print::time(2, "Gaussian coupling operator (large component, N=" + std::to_string(this->large->size()) + ")", timer);
     mrcpp::print::time(2, "Gaussian coupling operator (small component, N=" + std::to_string(this->small->size()) + ")", timer);

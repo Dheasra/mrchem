@@ -1396,6 +1396,9 @@ void driver::build_fock_operator(const json &json_fock, Molecule &mol, FockBuild
             F.setNucs(nuclei);
         }
     } 
+    ///////////////////////////////////////////////////////////
+    //////////   Atomic Small Component Operator   ////////////
+    ///////////////////////////////////////////////////////////
     if (json_fock.contains("asc_operator")) {
         MSG_INFO("PUTUTUTUTTUTUTTU");
         auto c = PhysicalConstants::get("light_speed");
