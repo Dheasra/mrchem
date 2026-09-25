@@ -47,6 +47,11 @@ protected:
     double calcConstant(double Z) const;
     double evalfPoly(double r) const;
 
+    //legacy functions used only for testing of the new ones
+    double calcConstant_hardcoded(double Z) const;
+    double evalfPoly_hardcoded(double r) const;
+
+
     double calcStdDev() const { return std::pow(2.0 * this->c_1, -0.5); }
     bool isVisibleAtScale(int scale, int nQuadPts) const override;
 };

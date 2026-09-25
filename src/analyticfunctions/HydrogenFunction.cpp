@@ -37,10 +37,23 @@ RadialFunction::RadialFunction(int n, int l, double Z)
         , L(l) {
     this->c_0 = calcConstant(Z);
     this->c_1 = 2.0 * Z / (1.0 * this->N);
+    // if (N+L <9){ //sanity test
+    //     if (N + L < 9) {
+    //     double calcVer = this->calcConstant(Z) * this->evalfPoly(rho);
+    //     double ref  = RadialFunction::calcConstant_hardcoded(Z) * RadialFunction::evalfPoly_hardcoded(rho);
+    //     if (std::abs(calcVer - ref) > 1e-10 * std::max(std::abs(ref), 1.0)) MSG_ABORT("Generalised formula doesn't hold with hardcoded tests, computed constant="<< calcConstant(Z) << ", ref. value=" <<RadialFunction::calcConstant_hardcoded(Z));
+    // }
 }
 
 double RadialFunction::evalf(const mrcpp::Coord<1> &r) const {
     double rho = this->c_1 * r[0];
+
+    // //sanity tests
+    // if (N+L<9) {
+    //     if (std::abs(this->evalfPoly(rho)- RadialFunction::evalfPoly_hardcoded(rho))>1e-10 ) {
+    //         MSG_ABORT("Generalised formula doesn't hold with hardcoded tests, computed constant="<< this->evalfPoly(rho) << ", ref. value=" <<RadialFunction::evalfPoly_hardcoded(rho));
+    //     }
+    // }
     return this->c_0 * this->evalfPoly(rho) * exp(-rho / 2.0);
 }
 
@@ -52,7 +65,42 @@ bool RadialFunction::isVisibleAtScale(int scale, int nQuadPts) const {
 }
 
 // clang-format off
+// double RadialFunction::calcConstant(double Z) const {
+//     // R_NL(r) = c_0 * rho^L * L_{N-L-1}^{(2L+1)}(rho) * exp(-rho/2),  rho = c_1*r = 2*Z*r/N
+//     // c_0 = Z^{3/2} * sqrt( (2/N)^3 / (2*N*(N+L)!*(N-L-1)!) )
+//     double c2 = std::pow(2.0 / N, 3) / (2.0 * N * math_utils::factorial(N + L) * math_utils::factorial(N - L - 1));
+//     return std::sqrt(c2) * std::pow(Z, 3.0 / 2.0);
+// }
 double RadialFunction::calcConstant(double Z) const {
+    // c_0 = Z^{3/2} * sqrt( (2/N)^3 * (N-L-1)! / (2*N*(N+L)!) )
+    double c2 = std::pow(2.0 / N, 3) * math_utils::factorial(N - L - 1) / (2.0 * N * math_utils::factorial(N + L));
+    return std::sqrt(c2) * std::pow(Z, 3.0 / 2.0);
+}
+// clang-format on
+
+// clang-format off
+double RadialFunction::evalfPoly(double rho) const {
+    // Returns rho^L * L_{N-L-1}^{(2L+1)}(rho), generalized Laguerre polynomial via the standard
+    // 3-term recurrence (DLMF 18.9.13):
+    //   L_0^a(x) = 1,  L_1^a(x) = 1 + a - x
+    //   (k+1) L_{k+1}^a(x) = (2k+1+a-x) L_k^a(x) - (k+a) L_{k-1}^a(x)
+    int kmax = this->N - this->L - 1;
+    int a = 2 * this->L + 1;
+    double Lkm1 = 1.0;             // L_0^a(rho)
+    double Lk = 1.0 + a - rho;     // L_1^a(rho)
+    double lag = Lkm1;
+    for (int k = 1; k <= kmax - 1; k++) {
+        double Lk1 = ((2 * k + 1 + a - rho) * Lk - (k + a) * Lkm1) / (k + 1);
+        Lkm1 = Lk;
+        Lk = Lk1;
+    }
+    if (kmax >= 1) lag = Lk;
+    return std::pow(rho, this->L) * lag;
+}
+// clang-format on
+
+// clang-format off
+double RadialFunction::calcConstant_hardcoded(double Z) const {
     double c = 0.0;
     if (N == 1 and L == 0) { c = 2.0;
     } else if (N == 2 and L == 0) { c = 1.0/(   2.0*std::sqrt(  2.0));
@@ -77,7 +125,7 @@ double RadialFunction::calcConstant(double Z) const {
 // clang-format on
 
 // clang-format off
-double RadialFunction::evalfPoly(double r) const {
+double RadialFunction::evalfPoly_hardcoded(double r) const {
     double value = 0.0;
     if (N == 1 and L == 0) { value =        (  1.0                                                                     );
     } else if (N == 2 and L == 0) { value =        (  2.0 -    1.0*r                                                          );

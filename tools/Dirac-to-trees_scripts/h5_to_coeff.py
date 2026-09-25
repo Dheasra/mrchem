@@ -1,18 +1,5 @@
-"""Convert all positive-energy DIRAC 4C spinors of an atom (C1 symmetry) into the coefficient files read by ASCOperator.
-
-Reads the DIRAC checkpoint H.h5 and writes two text files:
-    H_large.coef   coefficients of every atomic spinor on the large-component AO basis
-    H_small.coef   coefficients of every atomic spinor on the small-component AO basis (restricted kinetic balance)
-
-Each file is a complex matrix of shape (2*N_ao, N_spinors). Column i is the i-th spinor. Rows
-[0, N_ao) are the alpha (spin-up) AO coefficients and rows [N_ao, 2*N_ao) are the beta (spin-down)
-AO coefficients. The two files list the spinors in the same order, and their large components span
-the whole large AO space of the atom, which is what ASCOperator needs to build X = sum |phiS_i><phiL_i|.
-
-AOs are kept Cartesian (as stored by DIRAC: 6 d, 10 f, ...). The C++ side must not convert them to real
-solid harmonics (ASCOperator reads them with OrbitalExp(intgrl, /*spherical=*/false)), because the small
-component of a p_1/2 spinor lives entirely in the r^2 exp(-a r^2) function that spherical d functions drop.
-"""
+import argparse
+import os
 
 import h5py
 import numpy as np
@@ -22,6 +9,10 @@ NOISE_THRESHOLD = 1.0e-12
 
 ## Largest tolerated deviation of the spinor Gram matrix from the identity
 ORTHONORMALITY_TOL = 1.0e-10
+
+## Relative energy gap (to the mean level spacing) below which two consecutive stored MOs are
+## considered part of the same degenerate shell, and must therefore be either both kept or both dropped
+DEGENERACY_REL_TOL = 1.0e-6
 
 
 def write_complex_matrix_file(path, C):
@@ -161,8 +152,39 @@ def check_ground_state_kinetic_balance(alpha_small, beta_small, our_shells, atol
         assert abs(by - 1j * az) < tol, f"p shell at AO {o}: beta_py != i alpha_pz"
 
 
+def check_no_split_shell(eps, n_po, n_pairs):
+    """Abort if the requested cutoff falls inside a degenerate shell (e.g. half of a p3/2 quartet).
+
+    Compares the gap at the cutoff to the mean level spacing among the kept positive-energy MOs;
+    a gap far smaller than that mean is taken to mean the cutoff splits a degenerate shell.
+
+    @param eps      full eigenvalue array (stored-MO order)
+    @param n_po     number of negative-energy stored MOs (offset of the positive-energy branch)
+    @param n_pairs  number of positive-energy stored MOs (Kramers pairs) requested
+    """
+    n_mo = len(eps)
+    if n_pairs >= n_mo - n_po:
+        return  # taking everything, nothing to split
+    kept = eps[n_po:n_po + n_pairs]
+    mean_gap = (kept[-1] - kept[0]) / max(len(kept) - 1, 1)
+    gap = eps[n_po + n_pairs] - eps[n_po + n_pairs - 1]
+    assert gap > DEGENERACY_REL_TOL * mean_gap or mean_gap == 0.0, (
+        f"n_pairs={n_pairs} cuts a degenerate shell in half (gap {gap:.3e} at the cutoff vs. mean "
+        f"spacing {mean_gap:.3e} among the kept MOs); adjust n_pairs by +/-1 (or more) to land on a shell boundary"
+    )
+
+
 def main():
-    with h5py.File("H.h5", "r") as f:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("h5file", nargs="?", default="H.h5", help="DIRAC checkpoint to read (default: H.h5)")
+    parser.add_argument("n_pairs", nargs="?", type=int, default=None,
+                         help="number of positive-energy stored MOs (Kramers pairs) to keep, lowest energy "
+                              "first, 2 spinors each (default: all). E.g. 4 for Au's 1s,2s,2p1/2,2p3/2, "
+                              "since 2p3/2 alone is 2 stored MOs")
+    args = parser.parse_args()
+    tag = os.path.splitext(os.path.basename(args.h5file))[0]
+
+    with h5py.File(args.h5file, "r") as f:
         mo = f["result/wavefunctions/scf/mobasis"]
         orb = mo["orbitals"][()]
         n_basis = int(mo["n_basis"][0])   # large + small AOs
@@ -182,12 +204,18 @@ def main():
     n_ao_small = len(perm)
     assert n_ao_large + n_ao_small == n_basis
 
+    n_pairs = args.n_pairs if args.n_pairs is not None else (n_mo - n_po)
+    print("stored MO  energy (au)   [x] = kept")
+    for col in range(n_po, n_mo):
+        print(f"{col - n_po:9d}  {eps[col]:12.6f}   {'x' if col - n_po < n_pairs else ' '}")
+    check_no_split_shell(eps, n_po, n_pairs)
+
     # q[ao, mo, k]: k-th quaternion component of the coefficient of AO `ao` in stored MO `mo` (Fortran order)
     q = orb.reshape((n_basis, n_mo, nz), order="F")
 
-    # every positive-energy stored MO gives two Kramers-partner spinors
+    # every kept positive-energy stored MO gives two Kramers-partner spinors
     spinors, energies = [], []
-    for col in range(n_po, n_mo):
+    for col in range(n_po, n_po + n_pairs):
         for alpha, beta in quaternion_to_spinors(q[:, col, :]):
             spinors.append((alpha, beta))
             energies.append(eps[col])
@@ -214,9 +242,10 @@ def main():
     # the lowest spinor is the 1s_1/2 ground state, for which beta follows from kinetic balance
     check_ground_state_kinetic_balance(C_small[0:n_ao_small, 0], C_small[n_ao_small:, 0], our_small_shells)
 
-    write_complex_matrix_file("H_large.coef", C_large)
-    write_complex_matrix_file("H_small.coef", C_small)
-    print(f"wrote H_large.coef {C_large.shape}, H_small.coef {C_small.shape}")
+    large_path, small_path = f"{tag}_large.coef", f"{tag}_small.coef"
+    write_complex_matrix_file(large_path, C_large)
+    write_complex_matrix_file(small_path, C_small)
+    print(f"wrote {large_path} {C_large.shape}, {small_path} {C_small.shape}")
     print(f"max deviation of the spinor Gram matrix from identity: {dev:.2e}")
     print("spinor  energy          <L|L>      <S|S>")
     for i, (alpha, beta) in enumerate(spinors):
@@ -227,3 +256,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

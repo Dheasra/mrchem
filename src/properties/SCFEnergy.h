@@ -73,13 +73,13 @@ public:
     double getNuclearReactionEnergy() const { return this->Er_nuc; }
 
     void print(const std::string &id) const {
-        double c = 0.0; //light speed placeholder (because we don't care about it in NR jobs)
-        if (E_mc2 > 0.0) {
-            c = PhysicalConstants::get("light_speed");
-            MSG_INFO("c="<<c);
-        }
+        // double c = 0.0; //light speed placeholder (because we don't care about it in NR jobs)
+        // if (E_mc2 > 0.0) {
+        //     c = PhysicalConstants::get("light_speed");
+        //     MSG_INFO("c="<<c);
+        // }
 
-        auto E_au = E_nuc + E_el - c*c;
+        auto E_au = E_nuc + E_el;
         auto E_eV = E_au * PhysicalConstants::get("hartree2ev");
         auto E_kJ = E_au * PhysicalConstants::get("hartree2kjmol");
         auto E_kcal = E_au * PhysicalConstants::get("hartree2kcalmol");
@@ -97,7 +97,7 @@ public:
         print_utils::scalar(0, "X-C energy       ", E_xc,   "(au)", pprec, false);
         print_utils::scalar(0, "N-N energy       ", E_nn,   "(au)", pprec, false);
         print_utils::scalar(0, "Non-local pp energy ", E_nl,   "(au)", pprec, false);
-        print_utils::scalar(0, "Rest mass energy (-c^2) ", E_mc2-c*c,   "(au)", pprec, false);
+        print_utils::scalar(0, "Rest mass energy (-c^2) ", E_mc2,   "(au)", pprec, false);
 
         if (has_ext) {
             mrcpp::print::separator(0, '-');
@@ -112,7 +112,7 @@ public:
             print_utils::scalar(0, "Reaction energy (tot) ", Er_tot,  "(au)", pprec, false);
         }
         mrcpp::print::separator(0, '-');
-        print_utils::scalar(0, "Electronic energy (-c^2)", E_el-c*c,   "(au)", pprec, false);
+        print_utils::scalar(0, "Electronic energy (-c^2)", E_el,   "(au)", pprec, false);
         print_utils::scalar(0, "Nuclear energy   ", E_nuc,  "(au)", pprec, false);
         mrcpp::print::separator(0, '-');
         print_utils::scalar(0, "Total energy (-c^2) ", E_au,   "(au)", pprec, true);

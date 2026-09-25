@@ -384,7 +384,7 @@ ComplexDouble RankZeroOperator::dagger(Orbital bra, Orbital ket) {
     return out;
 }
 
-/** @brief compute expectation matrix
+/** @brief compute expectation matrix O_ij = <bra_i|Ô|ket_j> (Roothan Hall convention for the indices)
  *
  * @param bra: orbitals on the bra side
  * @param ket: orbitals on the ket side
@@ -398,14 +398,14 @@ ComplexMatrix RankZeroOperator::operator()(OrbitalVector &bra, OrbitalVector &ke
     Timer t1;
     RankZeroOperator &O = *this;
     OrbitalVector Oket = O(ket);
-    ComplexMatrix out = orbital::calc_overlap_matrix(bra, Oket);
+    ComplexMatrix out = orbital::calc_overlap_matrix(bra, Oket); 
     std::stringstream o_name;
     o_name << "<i|" << O.name() << "|j>";
     mrcpp::print::tree(2, o_name.str(), orbital::get_n_nodes(Oket), orbital::get_size_nodes(Oket), t1.elapsed());
     return out;
 }
 
-/** @brief compute expectation matrix of adjoint operator
+/** @brief compute expectation matrix of adjoint operator O^dagger_ij = <bra_jí|Ô^\dagger|ket_j>
  *
  * @param bra: orbitals on the bra side
  * @param ket: orbitals on the ket side
@@ -416,7 +416,7 @@ ComplexMatrix RankZeroOperator::dagger(OrbitalVector &bra, OrbitalVector &ket) {
     Timer t1;
     RankZeroOperator &O = *this;
     OrbitalVector Oket = O.dagger(ket);
-    ComplexMatrix out = orbital::calc_overlap_matrix(bra, Oket);
+    ComplexMatrix out = orbital::calc_overlap_matrix(bra, Oket); 
     std::stringstream o_name;
     o_name << "<i|" << O.name() << "^dagger|j>";
     mrcpp::print::tree(2, o_name.str(), orbital::get_n_nodes(Oket), orbital::get_size_nodes(Oket), t1.elapsed());

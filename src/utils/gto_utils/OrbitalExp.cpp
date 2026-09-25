@@ -78,8 +78,8 @@ GaussExp<3> OrbitalExp::getMO(int i, const DoubleMatrix &M, const double thresho
 }
 
 GaussExp<3> OrbitalExp::getDens(const DoubleMatrix &D) const {
-    if (D.rows() != size()) MSG_ERROR("Size mismatch");
-    if (D.cols() != size()) MSG_ERROR("Size mismatch");
+    if (D.rows() != size()) MSG_ERROR("Size mismatch, matrix rows="<< D.rows()<< ", expansion size="<< size());
+    if (D.cols() != size()) MSG_ERROR("Size mismatch, matrix cols="<< D.cols()<< ", expansion size="<< size());
 
     GaussExp<3> d_exp;
     for (int i = 0; i < size(); i++) {
