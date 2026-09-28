@@ -1,10 +1,12 @@
+import argparse
+
 import h5py
 import numpy as np
 
 L_LABEL = "spdfghi"
 
 
-def write_bas_from_aobasis(h5path, aobasis_index, out_path, symbol, charge):
+def write_bas_from_aobasis(h5path, aobasis_index, out_path, symbol, charge, keep_l=None):
     with h5py.File(h5path, "r") as f:
         g = f[f"input/aobasis/{aobasis_index}"]
         angular = int(g["angular"][0])
@@ -33,6 +35,12 @@ def write_bas_from_aobasis(h5path, aobasis_index, out_path, symbol, charge):
             coef_off += np_ * nc_
 
         ls_sorted = sorted(by_l.keys())
+        if keep_l is not None:
+            dropped = [l for l in ls_sorted if l not in keep_l]
+            if dropped:
+                print(f"  dropping l={dropped} ({[L_LABEL[l] for l in dropped]}), "
+                      f"keeping l={sorted(keep_l)} ({[L_LABEL[l] for l in sorted(keep_l)]})")
+            ls_sorted = [l for l in ls_sorted if l in keep_l]
         funcs_per_shell = [len(by_l[l]) for l in ls_sorted]
 
         with open(out_path, "w") as out:
@@ -54,5 +62,21 @@ def write_bas_from_aobasis(h5path, aobasis_index, out_path, symbol, charge):
 
 
 if __name__ == "__main__":
-    write_bas_from_aobasis("H.h5", 1, "H_large.bas", symbol="H", charge=1.0)
-    write_bas_from_aobasis("H.h5", 2, "H_small_dirac_rkb.bas", symbol="H", charge=1.0)  # reference only, not fed to MRChem
+    parser = argparse.ArgumentParser(
+        description="Write the large-component .bas file MRChem reads, from a DIRAC checkpoint.")
+    parser.add_argument("h5file", nargs="?", default="H.h5")
+    parser.add_argument("symbol", nargs="?", default="H")
+    parser.add_argument("charge", nargs="?", type=float, default=1.0)
+    parser.add_argument("--keep-l", type=int, nargs="+", default=None,
+                         help="only write shells with these angular momenta (0=s, 1=p, 2=d, ...); "
+                              "must match the l_needed set h5_to_coef.py prints for the same n_pairs cutoff, "
+                              "e.g. --keep-l 0 1 for an s+p (1s,2s,2p) spinor selection")
+    args = parser.parse_args()
+    tag = args.h5file.rsplit(".", 1)[0]
+    keep_l = set(args.keep_l) if args.keep_l is not None else None
+
+    write_bas_from_aobasis(args.h5file, 1, f"{tag}_large.bas", symbol=args.symbol, charge=args.charge, keep_l=keep_l)
+    if keep_l is None:
+        # reference only, not fed to MRChem (the small basis it actually uses is auto-generated from
+        # the large .bas file by generate_rkb_basis(), so there is nothing to prune here separately)
+        write_bas_from_aobasis(args.h5file, 2, f"{tag}_small_dirac_rkb.bas", symbol=args.symbol, charge=args.charge)

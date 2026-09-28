@@ -1,3 +1,19 @@
+"""Convert all positive-energy DIRAC 4C spinors of an atom (C1 symmetry) into the coefficient files read by ASCOperator.
+
+Reads the DIRAC checkpoint H.h5 and writes two text files:
+    H_large.coef   coefficients of every atomic spinor on the large-component AO basis
+    H_small.coef   coefficients of every atomic spinor on the small-component AO basis (restricted kinetic balance)
+
+Each file is a complex matrix of shape (2*N_ao, N_spinors). Column i is the i-th spinor. Rows
+[0, N_ao) are the alpha (spin-up) AO coefficients and rows [N_ao, 2*N_ao) are the beta (spin-down)
+AO coefficients. The two files list the spinors in the same order, and their large components span
+the whole large AO space of the atom, which is what ASCOperator needs to build X = sum |phiS_i><phiL_i|.
+
+AOs are kept Cartesian (as stored by DIRAC: 6 d, 10 f, ...). The C++ side must not convert them to real
+solid harmonics (ASCOperator reads them with OrbitalExp(intgrl, /*spherical=*/false)), because the small
+component of a p_1/2 spinor lives entirely in the r^2 exp(-a r^2) function that spherical d functions drop.
+"""
+
 import argparse
 import os
 
@@ -13,6 +29,17 @@ ORTHONORMALITY_TOL = 1.0e-10
 ## Relative energy gap (to the mean level spacing) below which two consecutive stored MOs are
 ## considered part of the same degenerate shell, and must therefore be either both kept or both dropped
 DEGENERACY_REL_TOL = 1.0e-6
+
+L_LABEL = "spdfghi"
+
+## Fraction of a matrix's own largest coefficient below which an AO shell is judged to carry no real weight
+## for a spinor (used to decide whether a whole shell can be pruned, see prune_unneeded_shells()).
+## RELATIVE, not an absolute magnitude like NOISE_THRESHOLD: coefficient scale grows with Z (s-shell
+## normalization alone goes like Z^{3/2}), so a fixed absolute cutoff tuned against a light atom is wrong
+## by orders of magnitude for a heavy one. Also deliberately looser than a plain "> 0" check: DIRAC's own
+## SCF/eigensolver leaves residual numerical mixing well above machine precision (e.g. a nominally pure 1s
+## AO on H was observed at ~3e-12 relative on the p shell -- not a real physical admixture, just solver noise)
+SHELL_PRUNE_TOL = 1.0e-6
 
 
 def write_complex_matrix_file(path, C):
@@ -109,12 +136,14 @@ def rkb_small_shell_order(large_shells, dirac_small_shells):
 
     @param large_shells        list of (l, exponent) of the large basis
     @param dirac_small_shells  list of (l, exponent) of the DIRAC small basis
-    @return                    (perm, our_shells): perm[k] is the DIRAC AO index of our small AO k,
-                               our_shells is the list of (l, exponent) in our order
+    @return                    (perm, our_shells, source_l): perm[k] is the DIRAC AO index of our small AO k;
+                               our_shells is the list of (l, exponent) in our order; source_l[i] is the angular
+                               momentum of the LARGE shell that generated our_shells[i] (needed to prune a small
+                               shell together with the large shell it came from, see prune_unneeded_shells())
     """
     offsets, n_dirac = shell_offsets(dirac_small_shells)
     used = [False] * len(dirac_small_shells)
-    perm, our_shells = [], []
+    perm, our_shells, source_l = [], [], []
     for l, e in large_shells:
         wanted = [l + 1] + ([l - 1] if l > 0 else [])
         for lw in wanted:
@@ -122,9 +151,84 @@ def rkb_small_shell_order(large_shells, dirac_small_shells):
             used[idx] = True
             perm.extend(range(offsets[idx], offsets[idx] + n_cartesian(lw)))
             our_shells.append((lw, e))
+            source_l.append(l)
     assert all(used), "DIRAC small basis contains shells that RKB does not generate"
     assert len(perm) == n_dirac
-    return np.array(perm), our_shells
+    return np.array(perm), our_shells, source_l
+
+
+def needed_angular_momenta(C, shells, rel_tol=SHELL_PRUNE_TOL):
+    """Angular momenta with at least one non-negligible coefficient, over any column of C.
+
+    Only the alpha AO block (rows [0, n_ao)) is inspected; beta shares the same per-shell layout, so an
+    all-zero alpha shell is all-zero in beta too for an atomic spinor (checked in prune_unneeded_shells()).
+
+    The cutoff is RELATIVE to the largest coefficient in C, not an absolute magnitude: coefficient scale
+    grows with Z (the s-shell normalization alone goes like Z^{3/2}), so an absolute cutoff tuned against a
+    light atom can be wildly wrong -- too loose or too tight -- for a heavy one like Au.
+
+    @param C        complex ndarray (2*n_ao, n_spin)
+    @param shells   list of (l, exponent) covering rows [0, n_ao)
+    @param rel_tol  fraction of the largest coefficient in C below which a coefficient counts as zero
+    @return         set of l values that have a non-negligible coefficient somewhere in C
+    """
+    offsets, n_ao = shell_offsets(shells)
+    row_max = np.max(np.abs(C[:n_ao]), axis=1)
+    noise = rel_tol * np.max(row_max)
+    return {l for o, (l, _) in zip(offsets, shells) if np.max(row_max[o:o + n_cartesian(l)]) > noise}
+
+
+def prune_unneeded_shells(C_large, C_small, large_shells, our_small_shells, source_l, rel_tol=SHELL_PRUNE_TOL):
+    """Drop large/small AO shells that are exactly zero for every kept spinor, by atomic (l, j) selection rules.
+
+    A free atom's Dirac equation separates by (l, j): the large component of an atomic spinor has one
+    definite l, and its small component (restricted kinetic balance) only ever mixes l+1 and l-1 relative
+    to that. So once the set of large-l values actually present among the kept spinors is known, every large
+    shell of a different l, and every small shell generated from a large shell of a different l, is exactly
+    zero (up to numerical noise) and can be dropped with no loss of information -- this is a lossless size
+    reduction, not an approximation (unlike a magnitude-based cutoff within a kept l).
+
+    @param C_large, C_small   full coefficient matrices, as built in main()
+    @param large_shells       list of (l, exponent) of the large AO basis
+    @param our_small_shells   list of (l, exponent) of the small AO basis, in our (RKB) order
+    @param source_l           source_l from rkb_small_shell_order(), parallel to our_small_shells
+    @param rel_tol            fraction of a matrix's own largest coefficient below which a coefficient
+                              counts as zero (see needed_angular_momenta()); applied to C_large and
+                              C_small separately, since the small component is intrinsically much smaller
+                              than the large one (by ~1/2c) and would false-trip a shared absolute scale
+    @return  (C_large_pruned, C_small_pruned, large_shells_kept, small_shells_kept, l_needed)
+    """
+    l_needed = needed_angular_momenta(C_large, large_shells, rel_tol)
+
+    def ao_mask_and_kept_shells(shells, shell_l_for_keep):
+        offsets, n_ao = shell_offsets(shells)
+        mask = np.zeros(n_ao, dtype=bool)
+        kept_shells = []
+        for o, shell, keep_l in zip(offsets, shells, shell_l_for_keep):
+            l, _ = shell
+            if keep_l in l_needed:
+                mask[o:o + n_cartesian(l)] = True
+                kept_shells.append(shell)
+        return mask, kept_shells
+
+    large_mask, large_shells_kept = ao_mask_and_kept_shells(large_shells, [l for l, _ in large_shells])
+    small_mask, small_shells_kept = ao_mask_and_kept_shells(our_small_shells, source_l)
+
+    # sanity check on the "exactly zero" claim: nothing dropped should have carried any real weight, in
+    # either the alpha or the beta half (beta uses the same per-shell AO layout as alpha, see docstring),
+    # relative to that matrix's own scale (large and small live at very different absolute magnitudes)
+    for C, mask, tag in ((C_large, large_mask, "large"), (C_small, small_mask, "small")):
+        n_ao = len(mask)
+        scale = np.max(np.abs(C[:n_ao]))
+        dropped = np.concatenate([~mask, ~mask])
+        worst = np.max(np.abs(C[dropped])) if dropped.any() else 0.0
+        assert worst < rel_tol * scale, (
+            f"{tag} shell pruning would drop a non-negligible coefficient "
+            f"({worst:.2e}, {worst / scale:.2e} relative to the largest {tag} coefficient)")
+
+    C_large_pruned = C_large[np.concatenate([large_mask, large_mask])]
+    C_small_pruned = C_small[np.concatenate([small_mask, small_mask])]
+    return C_large_pruned, C_small_pruned, large_shells_kept, small_shells_kept, l_needed
 
 
 def check_ground_state_kinetic_balance(alpha_small, beta_small, our_shells, atol_rel=1.0e-6):
@@ -200,7 +304,7 @@ def main():
     assert [l for l, _ in large_shells] == sorted(l for l, _ in large_shells), \
         "large shells must be ordered by angular momentum (as written by h5_to_bas.py)"
     _, n_ao_large = shell_offsets(large_shells)
-    perm, our_small_shells = rkb_small_shell_order(large_shells, dirac_small_shells)
+    perm, our_small_shells, source_l = rkb_small_shell_order(large_shells, dirac_small_shells)
     n_ao_small = len(perm)
     assert n_ao_large + n_ao_small == n_basis
 
@@ -242,10 +346,23 @@ def main():
     # the lowest spinor is the 1s_1/2 ground state, for which beta follows from kinetic balance
     check_ground_state_kinetic_balance(C_small[0:n_ao_small, 0], C_small[n_ao_small:, 0], our_small_shells)
 
+    # exact (lossless) AO pruning: drop large/small shells that are exactly zero for every kept spinor,
+    # by atomic (l, j) selection rules -- see prune_unneeded_shells()'s docstring
+    C_large, C_small, large_shells_kept, small_shells_kept, l_needed = prune_unneeded_shells(
+        C_large, C_small, large_shells, our_small_shells, source_l)
+    print(f"angular momenta needed by the kept spinors: {sorted(l_needed)} ({[L_LABEL[l] for l in sorted(l_needed)]})")
+    print(f"large AOs: {n_ao_large} -> {C_large.shape[0] // 2} "
+          f"({len(large_shells)} -> {len(large_shells_kept)} shells)")
+    print(f"small AOs: {n_ao_small} -> {C_small.shape[0] // 2} "
+          f"({len(our_small_shells)} -> {len(small_shells_kept)} shells)")
+
     large_path, small_path = f"{tag}_large.coef", f"{tag}_small.coef"
     write_complex_matrix_file(large_path, C_large)
     write_complex_matrix_file(small_path, C_small)
     print(f"wrote {large_path} {C_large.shape}, {small_path} {C_small.shape}")
+    print(f"NOTE: {large_path} only has the shells listed above -- the paired .bas file passed to MRChem "
+          f"must be filtered to the same large shells (same order), e.g. with h5_to_bas.py's --keep-l "
+          f"{' '.join(str(l) for l in sorted(l_needed))}")
     print(f"max deviation of the spinor Gram matrix from identity: {dev:.2e}")
     print("spinor  energy          <L|L>      <S|S>")
     for i, (alpha, beta) in enumerate(spinors):
@@ -256,4 +373,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -6,11 +6,14 @@ Can only translate s orbtials with confidence for now.
 # How to use 
 both scripts require the h5py package and scipy.
 
+
+## IMPORTANT: Run first h5_to_coeff, as it will output values required for h5_to_bas
+
 ## h5_to_coeff.py
 h5_to_coeff is called as
 
 ```bash
-$ python h5_to_coeff.py filename.h5 n_pairs
+$ python h5_to_coeff.py atom.h5 n_pairs
 ```
 
 Currently the input h5 binary is only fetched in the same directory as the script. By default it tries to fetch H.h5.
@@ -19,12 +22,13 @@ By default, n_pairs is set to fetch all spinors.
 The script will fail if you try to fetch only a part of a filled shell, for example n_pairs = 4 will fail,
 because you would be attempting to fetch the 1s 2s 2p1/2 pairs and half of the 2p3/2 shell (which contains 4 electrons).
 
+If n_pairs is not the default value (all spinors), the script will output in the terminal a line printing "l_needed/--keep-l" which will be needed for input of h5_to_bas.py.
+
 ## h5_to_bas.py
 
 h5_to_bas is called as
 
 ```bash
-$ python h5_to_bas.py
+$ python h5_to_bas.py atom.h5 <atom> <charge> --keep-l <output_keep_l_from_h5_to_coeff>
 ```
 
-Currently it has no input variable to indicate the filename, you need to change the name directly in the script.

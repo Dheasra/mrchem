@@ -182,8 +182,9 @@ void ExchangePotential::calcExchange_kij(double prec, Orbital phi_k, Orbital phi
     // the result is expected to be negligible
     Timer timer_ij;
     Orbital rho_ij = phi_i.paramCopy(true);
-    if (phi_i.Ncomp()>1) MSG_WARN("Components are not summed over, exchange is computed component-wise (not physical). Need new implementation")
-    mrcpp::multiply(rho_ij, phi_i, phi_j, prec_m1, true, true, true);
+    // mrcpp::multiply(rho_ij, phi_i, phi_j, prec_m1, true, true, true);
+    //multi component behaviour: all componenets should be summed, basically making a "density"
+    mrcpp::make_density(rho_ij, phi_i, phi_j, prec_m1);
     timer_ij.stop();
 
     //resetting out_kij to a default real definition rather than the complex it might have inherited from phi 
@@ -202,9 +203,11 @@ void ExchangePotential::calcExchange_kij(double prec, Orbital phi_k, Orbital phi
     // For now we assume all phi are complex or all ar real.
     bool RealOrbitals = phi_i.isreal();
 
-    Orbital V_ij = rho_ij.paramCopy(true); //multicomp test
+    Orbital V_ij = rho_ij.paramCopy(true);
+    V_ij.setNcomp(phi_k.Ncomp()); //Changes the number of components to the output's, to make multiplication easier
+
     double timer_allcomps = 0;
-    for (int comp = 0; comp < rho_ij.Ncomp(); comp++){
+    for (int comp = 0; comp < phi_k.Ncomp(); comp++){
         // prepare vector used to steer precision of Poisson application
         mrcpp::FunctionTreeVector<3, double> phi_opt_vec_real;
         mrcpp::FunctionTreeVector<3, ComplexDouble> phi_opt_vec_cplx;
@@ -218,16 +221,14 @@ void ExchangePotential::calcExchange_kij(double prec, Orbital phi_k, Orbital phi
             if (phi_i.iscomplex() and &phi_i != &phi_k and &phi_i != &phi_j) phi_opt_vec_cplx.emplace_back(1.0, phi_i.CompC[comp]);
         }
         
+        
         // compute V_ij = P[rho_ij]
         Timer timer_p;
         // Orbital V_ij = rho_ij.paramCopy(true); //moved outside of loop // multicomp test
         if (RealOrbitals) {
-            mrcpp::apply(prec_p, *V_ij.CompD[comp], P, *rho_ij.CompD[comp], phi_opt_vec_real, -1, true);//old 
-            
-            // mrcpp::apply(prec_p, *V_ij.CompD[0], P, *rho_ij.CompD[0], phi_opt_vec_real, -1, true);//old 
+            mrcpp::apply(prec_p, *V_ij.CompD[comp], P, *rho_ij.CompD[0], phi_opt_vec_real, -1, true);//rho_ij has only 1 component 
         } else {
-            mrcpp::apply(prec_p, *V_ij.CompC[comp], P, *rho_ij.CompC[comp], phi_opt_vec_cplx, -1, true);//old
-            // mrcpp::apply(prec_p, *V_ij.CompC[0], P, *rho_ij.CompC[0], phi_opt_vec_cplx, -1, true);//old
+            mrcpp::apply(prec_p, *V_ij.CompC[comp], P, *rho_ij.CompC[0], phi_opt_vec_cplx, -1, true);//rho_ij has only 1 component
         }
         timer_p.stop();
         timer_allcomps += timer_p.elapsed();
