@@ -58,15 +58,7 @@ ExchangePotential::ExchangePotential(PoissonOperator_p P, OrbitalVector_p Phi, d
  */
 void ExchangePotential::rotate(const ComplexMatrix &U) {
     if (this->exchange.size() == 0) return;
-    // //test debug start
-    // MSG_INFO("rotut");
-    // for (auto i: this->exchange){
-    //     i.calcSquareNorm();
-    //     MSG_INFO("norm =" << i.getSquareNorm());
-    //     if (i.isreal()) MSG_INFO("real comp 0 exists="<< (i.CompD[0]!=nullptr) << "comp 1 exists="<< (i.CompD[1]!=nullptr));
-    //     if (i.iscomplex()) MSG_INFO("complex comp 0 exists="<< (i.CompC[0]!=nullptr) << "comp 1 exists="<< (i.CompC[1]!=nullptr));
-    // }
-    // //test debug end
+
     mrcpp::rotate(this->exchange, U, this->apply_prec);
 
     // NOTE: The following MPI point is currently NOT implemented!
@@ -203,8 +195,7 @@ void ExchangePotential::calcExchange_kij(double prec, Orbital phi_k, Orbital phi
     // For now we assume all phi are complex or all ar real.
     bool RealOrbitals = phi_i.isreal();
 
-    Orbital V_ij = rho_ij.paramCopy(true);
-    V_ij.setNcomp(phi_k.Ncomp()); //Changes the number of components to the output's, to make multiplication easier
+    Orbital V_ij = phi_k.paramCopy(true);
 
     double timer_allcomps = 0;
     for (int comp = 0; comp < phi_k.Ncomp(); comp++){
@@ -221,14 +212,16 @@ void ExchangePotential::calcExchange_kij(double prec, Orbital phi_k, Orbital phi
             if (phi_i.iscomplex() and &phi_i != &phi_k and &phi_i != &phi_j) phi_opt_vec_cplx.emplace_back(1.0, phi_i.CompC[comp]);
         }
         
-        
         // compute V_ij = P[rho_ij]
         Timer timer_p;
         // Orbital V_ij = rho_ij.paramCopy(true); //moved outside of loop // multicomp test
         if (RealOrbitals) {
             mrcpp::apply(prec_p, *V_ij.CompD[comp], P, *rho_ij.CompD[0], phi_opt_vec_real, -1, true);//rho_ij has only 1 component 
         } else {
+            rho_ij.CompC[0] = rho_ij.CompD[0]->CopyTreeToComplex();
             mrcpp::apply(prec_p, *V_ij.CompC[comp], P, *rho_ij.CompC[0], phi_opt_vec_cplx, -1, true);//rho_ij has only 1 component
+            delete rho_ij.CompC[0];
+            rho_ij.CompC[0] = nullptr;
         }
         timer_p.stop();
         timer_allcomps += timer_p.elapsed();

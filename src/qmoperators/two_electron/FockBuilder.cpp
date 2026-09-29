@@ -240,7 +240,6 @@ SCFEnergy FockBuilder::trace(OrbitalVector &Phi, const Nuclei &nucs) {
         // Largely the same as ZORA, except without NR energy added, because it is not relevant. 
         // Could be merged with the ZORA condition above, but I think it is slightly more readable
         // we assume that at least one orbital is owned by this MPI
-        MSG_INFO("tutest");
         int Ncomponents = 1;
         for (int i = 0; i < Phi.size(); i++) {
             if (!mrcpp::mpi::my_func(i)) continue;
@@ -278,8 +277,7 @@ SCFEnergy FockBuilder::trace(OrbitalVector &Phi, const Nuclei &nucs) {
         OrbitalVector Xphi = (*asc)(Phi);
         double S_S_trace = mrcpp::calc_overlap_matrix(Xphi).real().trace(); //a bit wasteful to compute the full matrix, but space efficient here.
         E_mc2 += (-c)*c*S_S_trace; //small component mass contribution
-        MSG_INFO("Mass contrib="<< E_mc2);
-        // E_mc2 -= c*c; //shifting the gauge down
+        E_mc2 -= c*c*orbital::get_electron_number(Phi);; //shifting the gauge down
 
         if (this->nuc != nullptr) { E_en += this->nuc->trace(Xphi).real(); }
         if (this->coul != nullptr) E_ee += 0.5 * this->coul->trace(Xphi).real();
@@ -323,7 +321,6 @@ ComplexMatrix FockBuilder::operator()(OrbitalVector &bra, OrbitalVector &ket) {
         //If we have spinors, the kinetic operator is of the form (σ·p)V(σ·p), with σ being a Pauli matrix.
         //What this boolean does is enabling the application of the Pauli matrices along the x,y,z momentum operators.
         //NOTE! The second term does not change from being spinorial; (σ·p)(σ·p) = p^2 using the Dirac identity.
-        MSG_INFO("X2C of gold");
         int Ncomponents = 0;
         for (int i = 0; i < bra.size(); i++) {
             if (!mrcpp::mpi::my_func(i)) continue;
@@ -340,7 +337,6 @@ ComplexMatrix FockBuilder::operator()(OrbitalVector &bra, OrbitalVector &ket) {
         auto asc = std::dynamic_pointer_cast<ASCOperator>(this->chi);
         if (!asc) MSG_ABORT("isX2C() true but chi is not an ASCOperator");
         T_mat = c*qmoperator::calc_kinetic_matrix_linear_momentum(momentum(), *asc, bra, ket); //+ c*qmoperator::calc_kinetic_matrix_linear_momentum(momentum(), *asc, ket, bra);
-        MSG_INFO("Kinetic matrix=" << T_mat);
     } else {
         T_mat = qmoperator::calc_kinetic_matrix(momentum(), bra, ket);
     }
@@ -348,23 +344,21 @@ ComplexMatrix FockBuilder::operator()(OrbitalVector &bra, OrbitalVector &ket) {
     ComplexMatrix V_mat = ComplexMatrix::Zero(bra.size(), ket.size());
     V_mat += potential()(bra, ket);
 
-    MSG_INFO("Potential matrix (large contrib)="<< V_mat)
     if (isX2C()) {
         double c = getLightSpeed();
         V_mat += c*c*mrcpp::calc_overlap_matrix(bra,ket);
-        MSG_INFO("Mass energy matrix (large contrib)="<< c*c*mrcpp::calc_overlap_matrix(bra,ket));
         auto asc = std::dynamic_pointer_cast<ASCOperator>(this->chi);
         if (!asc) MSG_ABORT("isX2C() true but chi is not an ASCOperator");
         OrbitalVector xKet = (*asc)(ket);
         OrbitalVector xBra = (*asc)(bra);
         V_mat += potential()(xBra, xKet);
-        MSG_INFO("Potential matrix (small contrib)="<< potential()(xBra, xKet));
         V_mat += (-1.0)*c*c*mrcpp::calc_overlap_matrix(xBra, xKet);
-        MSG_INFO("Mass energy matrix (small contrib)="<< (-1.0)*c*c*mrcpp::calc_overlap_matrix(xBra, xKet));
     }
 
     mrcpp::print::footer(2, t_tot, 2);
     if (plevel == 1) mrcpp::print::time(1, "Computing Fock matrix", t_tot);
+    // ComplexMatrix out = (T_mat + V_mat).transpose(); //test debug alt
+    // return (T_mat + V_mat).transpose(); // test debug
     return T_mat + V_mat;
 }
 
@@ -657,9 +651,7 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
     Timer t_pot;
     //compute X2C correction term c^{-1}(σ·p)VR|ψ>
     OrbitalVector termTwo = (*asc)(Phi);
-    MSG_INFO("Xphi_L = phi_S norm="<< termTwo[0].norm());
     termTwo = V(termTwo);
-    MSG_INFO("VXphi_L = Vphi_S norm="<< termTwo[0].norm());
     for (int i = 0; i < Phi.size(); i++) {
         if (!mrcpp::mpi::my_func(i)) continue;
         // apply (σ_d p_d) to |VRψ> 
@@ -675,20 +667,18 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
     }
     
     OrbitalVector termOne = V(Phi);//compute first term EV|ψ>
-    MSG_INFO("Vphi_L norm="<< termOne[0].norm());
     for (int i = 0; i < Phi.size(); i++) {
         if (!mrcpp::mpi::my_func(i)) continue;
-        MSG_INFO("epsilon energy="<<eps[i]);
         for (int comp=0; comp<Ncomponents; comp++) 
         termOne[i].func_ptr->data.c1[comp] *= (0.5 + eps[i]/(two_cc)); //0.5 because the HelmholtzOperator applies -2*G, and the Dirac propagator trick creates only -G
     }
-    MSG_INFO("termOne norm="<< termOne[0].norm());
-    MSG_INFO("termTwo norm="<< termTwo[0].norm());
-    MSG_INFO("Psi norm="<< Psi[0].norm());
+    // MSG_INFO("termOne norm="<< termOne[0].norm());
+    // MSG_INFO("termTwo norm="<< termTwo[0].norm());
+    // MSG_INFO("Psi norm="<< Psi[0].norm());
 
-    MSG_INFO("<phi^L |termOne>"<< mrcpp::dot(Phi[0],termOne[0]));
-    MSG_INFO("<phi^L |termTWo>"<< mrcpp::dot(Phi[0],termTwo[0]));
-    MSG_INFO("<phi^L |psi>"<< mrcpp::dot(Phi[0],Psi[0]));
+    // MSG_INFO("<phi^L |termOne>"<< mrcpp::dot(Phi[0],termOne[0]));
+    // MSG_INFO("<phi^L |termTWo>"<< mrcpp::dot(Phi[0],termTwo[0]));
+    // MSG_INFO("<phi^L |psi>"<< mrcpp::dot(Phi[0],Psi[0]));
     // Add up all the terms to form the inhomogeneous part of the Helmholtz equation
     Timer t_add;
     OrbitalVector out = orbital::deep_copy(termOne);

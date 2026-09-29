@@ -128,7 +128,7 @@ void add_atom_spinors(gto_utils::Intgrl &intgrl, const std::string &coef_file, d
 
     // (2*nAO x nSpinors): rows [0,nAO) alpha AO coefficients, rows [nAO,2*nAO) beta; one column per atomic spinor
     ComplexMatrix C = math_utils::read_matrix_file_cplx(coef_file);
-    MSG_INFO("C(0,0) for " << coef_file << " = " << C(0,0)); 
+    // MSG_INFO("C(0,0) for " << coef_file << " = " << C(0,0)); 
     if (C.rows() != 2 * nAO) MSG_ABORT("Coupling coefficient matrix must have 2*" << nAO << " rows, current format= (" << C.rows() << " x " << C.cols() << ")");
     int nSpinors = C.cols();
 
@@ -141,7 +141,7 @@ void add_atom_spinors(gto_utils::Intgrl &intgrl, const std::string &coef_file, d
         mrcpp::project(proj_prec, ao.real(), ao_j);
         ao_real.push_back(ao);
     }
-    MSG_INFO("ao_real[0] norm = " << ao_real[offset].real().getSquareNorm());
+    // MSG_INFO("ao_real[0] norm = " << ao_real[offset].real().getSquareNorm());
 
     for (int i = 0; i < nSpinors; i++) {
         mrcpp::CompFunction<3> spinor(0, false, 2);
@@ -164,16 +164,16 @@ void add_atom_spinors(gto_utils::Intgrl &intgrl, const std::string &coef_file, d
             }
             empty_spinor = false; //spinor has coefficients
             mrcpp::CompFunction<3> psi_c;
-            MSG_INFO("i=" << i << " c=" << c << " coefs.size()=" << coefs.size() << " terms.size()=" << terms.size());
+            // MSG_INFO("i=" << i << " c=" << c << " coefs.size()=" << coefs.size() << " terms.size()=" << terms.size());
             mrcpp::linear_combination(psi_c, coefs, terms, proj_prec);
-            MSG_INFO("psi_c norm after linear_combination = " << psi_c.norm());  // or getSquareNorm() on whichever component is populated
+            // MSG_INFO("psi_c norm after linear_combination = " << psi_c.norm());  // or getSquareNorm() on whichever component is populated
             if (psi_c.isreal()) {
                 psi_c.CompC[0]= psi_c.CompD[0]->CopyTreeToComplex();
                 delete psi_c.CompD[0];
                 psi_c.CompD[0] = nullptr;
             }
             spinor.setCplx(psi_c.CompC[0], c);
-            MSG_INFO("sssspinor norm after linear_combination = " << spinor.norm());  // or getSquareNorm() on whichever component is populated
+            // MSG_INFO("sssspinor norm after linear_combination = " << spinor.norm());  // or getSquareNorm() on whichever component is populated
             psi_c.CompC[0] = nullptr; // ownership transferred to spinor, avoid double free
             spinor.calcSquareNorm();
         }
@@ -236,15 +236,15 @@ ASCOperator::ASCOperator(const Nuclei &nucs, const std::vector<std::string> &lar
         mrcpp::CompFunction<3> large_real;
         large_real.defreal();
         large_real.alloc(2, true);
-        MSG_INFO("path_comp[0]="<<large_tree_paths[i]+"_Large_alpha_real");
+        // MSG_INFO("path_comp[0]="<<large_tree_paths[i]+"_Large_alpha_real");
         large_real.CompD[0]->loadTree(large_tree_paths[i]+"_Large_alpha_real");
-        MSG_INFO("a "<< large_real.CompD[0]->getNNodes());
+        // MSG_INFO("a "<< large_real.CompD[0]->getNNodes());
         large_real.CompD[1]->loadTree(large_tree_paths[i]+"_Large_beta_real");
-        MSG_INFO("a1 "<< (large_real.CompD[1]->getNNodes()));
+        // MSG_INFO("a1 "<< (large_real.CompD[1]->getNNodes()));
         // large_alpha_real.CompD[0]
         large_comps.push_back(large_real);
 
-        MSG_INFO("b");
+        // MSG_INFO("b");
         mrcpp::CompFunction<3> large_imag;
         large_imag.defreal();
         large_imag.alloc(2, true);
@@ -257,10 +257,10 @@ ASCOperator::ASCOperator(const Nuclei &nucs, const std::vector<std::string> &lar
         mrcpp::linear_combination(large_tmp, imag1, large_comps, proj_prec, false);
 
         std::vector<mrcpp::CompFunction<3>> small_comps(0);
-        MSG_INFO("c");
+        // MSG_INFO("c");
         this->large->push_back(large_tmp);
-        MSG_INFO("d large ok path_small=" << small_tree_paths[i]+"_Small_alpha_real");
-        MSG_INFO("d large ok path_Small=" << small_tree_paths[i]+"_Small_beta_real");
+        // MSG_INFO("d large ok path_small=" << small_tree_paths[i]+"_Small_alpha_real");
+        // MSG_INFO("d large ok path_Small=" << small_tree_paths[i]+"_Small_beta_real");
         mrcpp::CompFunction<3> small_real;
         small_real.defreal();
         small_real.alloc(2, true);
@@ -268,7 +268,7 @@ ASCOperator::ASCOperator(const Nuclei &nucs, const std::vector<std::string> &lar
         small_real.CompD[1]->loadTree(small_tree_paths[i]+"_Small_beta_real");
         small_comps.push_back(small_real);
         // small_alpha_real.CompD[0]
-        MSG_INFO("e");
+        // MSG_INFO("e");
         mrcpp::CompFunction<3> small_imag;
         small_imag.defreal();
         small_imag.alloc(2, true);
@@ -276,12 +276,12 @@ ASCOperator::ASCOperator(const Nuclei &nucs, const std::vector<std::string> &lar
         small_imag.CompD[1]->loadTree(small_tree_paths[i]+"_Small_beta_imag");
         small_comps.push_back(small_imag);
         mrcpp::CompFunction<3> small_tmp;
-        MSG_INFO("f");
+        // MSG_INFO("f");
         small_tmp.defcomplex();
         small_tmp.alloc(2, true);
         mrcpp::linear_combination(small_tmp, imag1, small_comps, proj_prec,false);
         this->small->push_back(small_tmp);
-        MSG_INFO("g end");
+        // MSG_INFO("g end");
     }
     //orthogonalising the large component between themselves
     ComplexMatrix SL = mrcpp::calc_overlap_matrix(*(this->large));
@@ -305,64 +305,6 @@ ASCOperator::ASCOperator(const Nuclei &nucs, const std::vector<std::string> &lar
     mrcpp::rotate(*(this->large), U, proj_prec);
 
     if (large->size() != small->size()) MSG_ABORT("Large and small component size mismatch! Nbr of Large=" << large->size() << ", Nbr of small="<< small->size());
-
-    // //debug
-    // //===================================
-    // std::vector<ComplexDouble> imag1(2);
-    // imag1[0] = {1.0, 0.0};
-    // imag1[1] = {0.0, 1.0}; //{{1.0,0.0}, {0.0, 1.0}}; //1, i
-    // std::vector<mrcpp::CompFunction<3>> large_comps(0);
-    // mrcpp::CompFunction<3> large_real;
-    // large_real.defreal();
-    // large_real.alloc(2, true);
-    // MSG_INFO("path_comp[0]="<<"/home/qpitto/DIRAC_runs/ReMRChem/Runs/H2/H2_Large_alpha_real");
-    // large_real.CompD[0]->loadTree("/home/qpitto/DIRAC_runs/ReMRChem/Runs/H2/H2_Large_alpha_real");
-    // MSG_INFO("a "<< large_real.CompD[0]->getNNodes());
-    // large_real.CompD[1]->loadTree("/home/qpitto/DIRAC_runs/ReMRChem/Runs/H2/H2_Large_beta_real");
-    // MSG_INFO("a1 "<< (large_real.CompD[1]->getNNodes()));
-    // // large_alpha_real.CompD[0]
-    // large_comps.push_back(large_real);
-
-    // MSG_INFO("b");
-    // mrcpp::CompFunction<3> large_imag;
-    // large_imag.defreal();
-    // large_imag.alloc(2, true);
-    // large_imag.CompD[0]->loadTree("/home/qpitto/DIRAC_runs/ReMRChem/Runs/H2/H2_Large_alpha_imag");
-    // large_imag.CompD[1]->loadTree("/home/qpitto/DIRAC_runs/ReMRChem/Runs/H2/H2_Large_beta_imag");
-    // large_comps.push_back(large_imag);
-    // mrcpp::CompFunction<3> large_tmp;
-    // large_tmp.defcomplex();
-    // large_tmp.alloc(2, true);
-    // mrcpp::linear_combination(large_tmp, imag1, large_comps, proj_prec, false);
-
-    // std::vector<mrcpp::CompFunction<3>> small_comps(0);
-    // MSG_INFO("c");
-    // this->large->push_back(large_tmp);
-    // MSG_INFO("d large ok path_small=" << small_tree_paths[i]+"_Small_alpha_real");
-    // MSG_INFO("d large ok path_Small=" << small_tree_paths[i]+"_Small_beta_real");
-    // mrcpp::CompFunction<3> small_real;
-    // small_real.defreal();
-    // small_real.alloc(2, true);
-    // small_real.CompD[0]->loadTree(small_tree_paths[i]+"_Small_alpha_real");
-    // small_real.CompD[1]->loadTree(small_tree_paths[i]+"_Small_beta_real");
-    // small_comps.push_back(small_real);
-    // // small_alpha_real.CompD[0]
-    // MSG_INFO("e");
-    // mrcpp::CompFunction<3> small_imag;
-    // small_imag.defreal();
-    // small_imag.alloc(2, true);
-    // small_imag.CompD[0]->loadTree(small_tree_paths[i]+"_Small_alpha_imag");
-    // small_imag.CompD[1]->loadTree(small_tree_paths[i]+"_Small_beta_imag");
-    // small_comps.push_back(small_imag);
-    // mrcpp::CompFunction<3> small_tmp;
-    // MSG_INFO("f");
-    // small_tmp.defcomplex();
-    // small_tmp.alloc(2, true);
-    // mrcpp::linear_combination(small_tmp, imag1, small_comps, proj_prec,false);
-    // this->small->push_back(small_tmp);
-    // MSG_INFO("g end");
-
-    // //?===================================
 
     mrcpp::print::time(2, "Gaussian coupling operator (large component, N=" + std::to_string(this->large->size()) + ")", timer);
     mrcpp::print::time(2, "Gaussian coupling operator (small component, N=" + std::to_string(this->small->size()) + ")", timer);
