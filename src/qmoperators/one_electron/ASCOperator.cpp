@@ -26,6 +26,7 @@
 #include "ASCOperator.h"
 
 #include <MRCPP/Gaussians>
+#include <MRCPP/Parallel>
 #include <MRCPP/Printer>
 #include <MRCPP/Timer>
 #include <MRCPP/utils/CompFunction.h>
@@ -139,47 +140,75 @@ void add_atom_spinors(gto_utils::Intgrl &intgrl, const std::string &coef_file, d
         mrcpp::CompFunction<3> ao(0, false, 1);
         mrcpp::build_grid(ao.real(), ao_j);
         mrcpp::project(proj_prec, ao.real(), ao_j);
+        // Convert to complex once here, O(nAO) total, instead of paying for a full deep_copy of this AO's
+        // tree on every (spinor, AO) pair that reuses it below. linear_combination() mutates a real-typed
+        // input in place the first time it needs to combine it into a complex result (converts the tree,
+        // frees the real one) -- fine for a private temporary, but would silently corrupt this cached,
+        // shared AO on its second use if it were still real. Pre-converting removes both the mutation risk
+        // and the need to defensively deep-copy on every reuse (see the spinor loop below).
+        ao.CompC[0] = ao.CompD[0]->CopyTreeToComplex();
+        delete ao.CompD[0];
+        ao.CompD[0] = nullptr;
+        ao.defcomplex();
         ao_real.push_back(ao);
     }
     // MSG_INFO("ao_real[0] norm = " << ao_real[offset].real().getSquareNorm());
 
+    int kept = spinors.size();               // running, rank-synced count of kept spinors so far
     for (int i = 0; i < nSpinors; i++) {
+        // MPI safe check if spinor is empty
+        // decided identically on every rank -- cheap (matrix lookup only), no MW trees touched
+        bool empty_spinor = true;
+        for (int c = 0; c < 2 && empty_spinor; c++)
+            for (int j = 0; j < nAO; j++)
+                if (std::abs(C(c * nAO + j, i)) >= coeff_thrs) { empty_spinor = false; break; }
+        if (empty_spinor) continue;          // every rank skips index i the same way -> vector stays in sync
+
+        // if spinor is not empty, fill the tree
         mrcpp::CompFunction<3> spinor(0, false, 2);
+        spinor.setRank(kept++);
         spinor.defcomplex();
-        bool empty_spinor = true; // Keeps track of a spinor being empty or not, to avoid pushing placeholder(zero)-valued spinors to the expansion. Should prevent a size mismatch between large and small components 
-        for (int c = 0; c < 2; c++) {
-            std::vector<ComplexDouble> coefs;
-            std::vector<mrcpp::CompFunction<3>> terms;
-            for (int j = 0; j < nAO; j++) {
-                ComplexDouble c_ij = C(c * nAO + j, i);
-                if (std::abs(c_ij) < coeff_thrs) continue;
-                mrcpp::CompFunction<3> term;
-                mrcpp::deep_copy(term, ao_real[offset + j]); // block-diagonal: this atom's own AOs only
-                coefs.push_back(c_ij);
-                terms.push_back(term); // copy (shallow, shares func_ptr): CompFunction's move ctor is declared but undefined in MRCPP
+        if (mrcpp::mpi::my_func(spinor.rank())) {
+            // spinor i passed the empty check above (identical predicate, same C, same coeff_thrs, run on
+            // every rank), so it cannot come out empty here too. This is only a defensive check: unlike the
+            // rank-synced check above, a `continue` here would run on the owning rank only and desync
+            // spinors' size/indexing across ranks (see the empty-spinor/my_func ordering discussion), so a
+            // real violation must abort loudly instead of silently dropping the spinor on one rank.
+            bool empty_spinor = true;
+            for (int c = 0; c < 2; c++) {
+                std::vector<ComplexDouble> coefs;
+                std::vector<mrcpp::CompFunction<3>> terms;
+                for (int j = 0; j < nAO; j++) {
+                    ComplexDouble c_ij = C(c * nAO + j, i);
+                    if (std::abs(c_ij) < coeff_thrs) continue;
+                    coefs.push_back(c_ij);
+                    // Shallow copy (shares func_ptr, ref-counted): block-diagonal, this atom's own AOs only.
+                    // Safe without a deep_copy now that ao_real is stored complex (see the projection loop
+                    // above): linear_combination()'s complex branch only reads its inputs, never mutates them.
+                    terms.push_back(ao_real[offset + j]);
+                }
+                if (coefs.empty()) {
+                    spinor.complex(c); // lazily allocates a zero-valued component
+                    continue;
+                }
+                empty_spinor = false; //spinor has coefficients
+                mrcpp::CompFunction<3> psi_c;
+                mrcpp::linear_combination(psi_c, coefs, terms, proj_prec);
+                // terms are all complex now (see the projection loop above), so linear_combination() always
+                // marks psi_c complex too; this branch is defensive and should not fire in practice
+                if (psi_c.isreal()) {
+                    psi_c.CompC[0]= psi_c.CompD[0]->CopyTreeToComplex();
+                    delete psi_c.CompD[0];
+                    psi_c.CompD[0] = nullptr;
+                }
+                spinor.setCplx(psi_c.CompC[0], c);
+                // MSG_INFO("sssspinor norm after linear_combination = " << spinor.norm());  // or getSquareNorm() on whichever component is populated
+                psi_c.CompC[0] = nullptr; // ownership transferred to spinor, avoid double free
+                spinor.calcSquareNorm();
             }
-            if (coefs.empty()) {
-                spinor.complex(c); // lazily allocates a zero-valued component
-                continue;
-            }
-            empty_spinor = false; //spinor has coefficients
-            mrcpp::CompFunction<3> psi_c;
-            // MSG_INFO("i=" << i << " c=" << c << " coefs.size()=" << coefs.size() << " terms.size()=" << terms.size());
-            mrcpp::linear_combination(psi_c, coefs, terms, proj_prec);
-            // MSG_INFO("psi_c norm after linear_combination = " << psi_c.norm());  // or getSquareNorm() on whichever component is populated
-            if (psi_c.isreal()) {
-                psi_c.CompC[0]= psi_c.CompD[0]->CopyTreeToComplex();
-                delete psi_c.CompD[0];
-                psi_c.CompD[0] = nullptr;
-            }
-            spinor.setCplx(psi_c.CompC[0], c);
-            // MSG_INFO("sssspinor norm after linear_combination = " << spinor.norm());  // or getSquareNorm() on whichever component is populated
-            psi_c.CompC[0] = nullptr; // ownership transferred to spinor, avoid double free
-            spinor.calcSquareNorm();
+            if (empty_spinor) MSG_ABORT("Spinor " << spinor.rank() << " was non-empty in the rank-synced check "
+                                        << "above but empty here -- the two checks must use the same predicate");
         }
-        // Placeholder columns must not enter the set: X = sum_i |phiS_i><phiL_i| pairs the large and
-        // small sets by index, and the large (N_AO) and small (N_AO_small) AO counts differ.
-        if (empty_spinor) continue;
         spinors.push_back(spinor);
     }
 }
@@ -298,6 +327,8 @@ ASCOperator::ASCOperator(const Nuclei &nucs, const std::vector<std::string> &lar
     Timer timer;
     this->large = project_large_spinor_set(nucs, large_bas_files, large_coef_files, proj_prec, screen, coeff_thrs);
     this->small = project_small_spinor_set(nucs, large_bas_files, small_coef_files, proj_prec, screen, coeff_thrs);
+    // every rank must have finished building the spinors it owns before the collective overlap/rotate below
+    mrcpp::mpi::barrier(mrcpp::mpi::comm_wrk);
 
     //orthogonalising the large component between themselves
     ComplexMatrix SL = mrcpp::calc_overlap_matrix(*(this->large));
@@ -321,6 +352,7 @@ OrbitalVector ASCOperator::operator()(OrbitalVector &inp) {
         Orbital out_tmp (inp[i].getFuncData());
         mrcpp::linear_combination(out_tmp, vec_Lket, *(this->small),-1.0, false);
         out_tmp.func_ptr->data.n1[0] = inp[i].func_ptr->data.n1[0]; //transmitting the spin to out_tmp
+        out_tmp.func_ptr->data.d1[0] = inp[i].func_ptr->data.d1[0]; //transmitting the occupation to out_tmp
         out.push_back(out_tmp);
     }
     return out;
