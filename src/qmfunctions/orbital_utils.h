@@ -70,6 +70,9 @@ ComplexMatrix diagonalize(double prec, OrbitalVector &Phi, ComplexMatrix &F);
 ComplexMatrix diagonalize(double prec, OrbitalVector &Phi, ComplexMatrix &F, OrbitalVector &Psi);
 ComplexMatrix orthonormalize(double prec, OrbitalVector &Phi, ComplexMatrix &F);
 ComplexMatrix orthonormalize_ASC(double prec, OrbitalVector &Phi_L, ComplexMatrix &F, ASCOperator &X);
+bool is_kramers_restricted(const OrbitalVector &Phi);
+OrbitalVector kramers_partners(OrbitalVector &Phi);
+OrbitalVector rotate_with_partners(OrbitalVector &Phi, OrbitalVector &KPhi, const ComplexMatrix &U, double prec);
 ComplexMatrix kramers_orthonormalize(double prec, OrbitalVector &Phi, ComplexMatrix &F);
 
 int size_empty(const OrbitalVector &Phi);

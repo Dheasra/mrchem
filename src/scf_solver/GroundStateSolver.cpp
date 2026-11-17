@@ -38,7 +38,7 @@
 #include "qmoperators/two_electron/FockBuilder.h"
 #include "qmoperators/two_electron/ReactionOperator.h"
 
-#include <MRCPP/utils/spinor_utils.h> //debug, remove when done
+#include <MRCPP/utils/spinor_utils.h>
 
 using mrcpp::Printer;
 using mrcpp::Timer;
@@ -318,7 +318,7 @@ json GroundStateSolver::optimize(Molecule &mol, FockBuilder &F) {
             if (!asc) MSG_ABORT("isX2C() true but chi is not an ASCOperator");
             orbital::orthonormalize_ASC(orb_prec, Phi_np1, F_mat, *asc);
         } else {
-            orbital::orthonormalize(orb_prec, Phi_np1, F_mat); //TODO: maybe add a path to enforce Kramers symmetry when restricted and 2c
+            orbital::orthonormalize(orb_prec, Phi_np1, F_mat);
         }
 
         // Compute orbital updates
@@ -531,7 +531,6 @@ DoubleVector GroundStateSolver::getNewOccupations(OrbitalVector &Phi_n, OrbitalV
     DoubleMatrix occOverlap = currOcc.asDiagonal() * overlap;
     DoubleVector p = occOverlap.colwise().norm();
 
-    // debug print section
     print_utils::matrix(3, "MOM overlap matrix", overlap, 2);
     print_utils::vector(3, "MOM total overlap", p, 2);
 

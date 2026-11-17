@@ -52,7 +52,7 @@ ZoraOperator::ZoraOperator(QMPotential &vz, double c, double proj_prec, bool inv
             k->real().map([two_cc](double val) { return (val) / (two_cc - val); });
             // k->real().map([two_cc](double val) { return 1 / (two_cc/(val) - 1); }); //test debug massive memory usage of chi
         }
-        k->real().crop(proj_prec);
+        k->real().crop(proj_prec, 1.0, false); // relative crop: an absolute crop at proj_prec wipes chi at prec 1e-4
     }
 
     RankZeroOperator &chi = (*this);

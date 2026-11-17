@@ -64,7 +64,6 @@ namespace mrchem {
  *
  */
 void FockBuilder::build(double exx) {
-    std::cout << "FockBuilder::build -- Building Potential operator" << std::endl;
     this->exact_exchange = exx;
 
     this->V = RankZeroOperator();
@@ -388,7 +387,21 @@ OrbitalVector FockBuilder::buildHelmholtzArgument(double prec, OrbitalVector Phi
 
     Timer t_rot;
 
-    OrbitalVector Psi = orbital::rotate(Phi, L_mat - F_mat, prec);
+    OrbitalVector Psi;
+    if (orbital::is_kramers_restricted(Phi)) {
+        // Kramers-restricted: F phi_i = sum_j phi_j F_ji + sum_j K phi_j G_ji with G_ji = <K phi_j|F|phi_i>,
+        // so the Helmholtz argument also needs the coupling to the Kramers partners: -sum_j K phi_j G_ji.
+        int N = Phi.size();
+        OrbitalVector KPhi = orbital::kramers_partners(Phi);
+        ComplexMatrix G = (*this)(KPhi, Phi);
+        mrcpp::print::value(2, "Kramers coupling max|G|", G.cwiseAbs().maxCoeff(), "(abs)", 6);
+        ComplexMatrix M(2 * N, N);
+        M << L_mat - F_mat, -G;
+        Psi = orbital::rotate_with_partners(Phi, KPhi, M, prec);
+        KPhi.clear();
+    } else {
+        Psi = orbital::rotate(Phi, L_mat - F_mat, prec);
+    }
     mrcpp::print::time(2, "Rotating orbitals", t_rot);
 
     OrbitalVector out;
@@ -401,10 +414,8 @@ OrbitalVector FockBuilder::buildHelmholtzArgument(double prec, OrbitalVector Phi
         Ncomponents = mrcpp::mpi::allreduce_max(Ncomponents, mrcpp::mpi::comm_wrk);
         //note: the new formulation is practical for either NR or 2C, but 1C requires a different correction than 2C which is not implemented yet
         if (Ncomponents==1) out = buildHelmholtzArgumentZORA(Phi, Psi, F_mat.real().diagonal(), prec); 
-        if (Ncomponents>1) out = buildHelmholtzArgumentCompact(Phi, Psi); //test debug alt propagator
-    } else if (isX2C()) {
-        out = buildHelmholtzArgumentX2C(Phi, Psi, F_mat.real().diagonal(), prec);
-    } else if (isAZora()) {
+        if (Ncomponents>1) out = buildHelmholtzArgumentCompact(Phi, Psi, prec);
+    } else if (isAZora()){
         out = buildHelmholtzArgumentZORA(Phi, Psi, F_mat.real().diagonal(), prec);
     } else {
         out = buildHelmholtzArgumentNREL(Phi, Psi);
@@ -572,7 +583,7 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentNREL(OrbitalVector &Phi, Orbita
 }
 
 // Alternative ZORA propagator argument, more compact but has 2 subsequent derivatives
-OrbitalVector FockBuilder::buildHelmholtzArgumentCompact(OrbitalVector &Phi, OrbitalVector &Psi) {
+OrbitalVector FockBuilder::buildHelmholtzArgumentCompact(OrbitalVector &Phi, OrbitalVector &Psi, double prec) {
     // Get necessary operators
     double c = getLightSpeed();
     double two_cc = 2.0 * c * c;
@@ -609,7 +620,10 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentCompact(OrbitalVector &Phi, Orb
         for (int dim=0; dim<3; dim++) nabla_Phi[dim].free();
 
         // apply χ to (σ·p)|ψ>
-        termTwo_tmp = chi(termTwo_tmp); 
+        // chi(σ·p)phi and (σ·p)chi(σ·p)phi carry ~20x the orbital's node count; cropping them at prec
+        // halves the peak memory without changing the energies
+        termTwo_tmp = chi(termTwo_tmp);
+        termTwo_tmp.crop(prec);
         
         // apply (σ_d p_d) to χ(σ·p)|ψ> (no summation yet)
         std::vector<Orbital> nabla_chi_nabla_Phi = p(termTwo_tmp, rotate_spin);
@@ -617,6 +631,7 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentCompact(OrbitalVector &Phi, Orb
         termTwo[i].add({1.0, 0.0}, nabla_chi_nabla_Phi[0]);
         termTwo[i].add({1.0, 0.0}, nabla_chi_nabla_Phi[1]);
         termTwo[i].add({1.0, 0.0}, nabla_chi_nabla_Phi[2]);
+        termTwo[i].crop(prec);
     }
 
     mrcpp::print::time(2, "Computing potential term", t_pot);
@@ -698,7 +713,6 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
     mrcpp::print::time(2, "Adding contributions", t_add);
     return out;
 }
-
 
 void FockBuilder::setZoraType(bool has_nuc, bool has_coul, bool has_xc, bool is_azora) {
     this->zora_has_nuc = has_nuc;
