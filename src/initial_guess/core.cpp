@@ -248,7 +248,12 @@ void initial_guess::core::rotate_orbitals(OrbitalVector &Psi, double prec, Compl
     if (Psi.size() == 0) return;
 
     Timer t_tot;
-    mrcpp::rotate(Phi, U, Psi, prec);
+    // Rotate on the full union grid of the AOs (prec < 0), then crop. mrcpp::rotate only refines a node
+    // if the parent's rotated wavelet norm exceeds prec*2^(-(n+1)/2); at the coarse root scales of a large
+    // box this threshold is ~8*prec and compact core orbitals (e.g. guess 1s orbitals at low guess prec) are lost.
+    mrcpp::rotate(Phi, U, Psi, -1.0);
+    for (auto &psi : Psi)
+        if (mrcpp::mpi::my_func(psi)) psi.crop(prec);
     mrcpp::print::time(1, "Rotating orbitals", t_tot);
 }
 

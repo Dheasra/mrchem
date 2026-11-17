@@ -141,8 +141,7 @@ private:
     std::shared_ptr<QMPotential> collectZoraBasePotential();
     OrbitalVector buildHelmholtzArgumentZORA(OrbitalVector &Phi, OrbitalVector &Psi, DoubleVector eps, double prec);
     OrbitalVector buildHelmholtzArgumentNREL(OrbitalVector &Phi, OrbitalVector &Psi);
-    OrbitalVector buildHelmholtzArgumentCompact(OrbitalVector &Phi, OrbitalVector &Psi);
-    OrbitalVector buildHelmholtzArgumentX2C(OrbitalVector &Phi, OrbitalVector &Psi, DoubleVector eps, double prec);
+    OrbitalVector buildHelmholtzArgumentCompact(OrbitalVector &Phi, OrbitalVector &Psi, double prec);
     std::shared_ptr<AZoraPotential> chiPot{nullptr}; // Potential for AZORA chi operator
     std::shared_ptr<QMPotential> chiInvPot{nullptr}; // Potential for AZORA chi_inv operator
 };

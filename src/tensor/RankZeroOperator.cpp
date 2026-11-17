@@ -170,7 +170,6 @@ RankZeroOperator &RankZeroOperator::operator+=(const RankZeroOperator &O) {
         }
         for (auto i : O.coef_exp) this->coef_exp.push_back(i);
         for (const auto &i : O.oper_exp) this->oper_exp.push_back(i);
-        // for (const auto &i : O.oper_exp) std::cout << "RankZeroOperator::operator+= -- operator expansion: " << &i << std::endl;
     } else {
         MSG_ABORT("Cannot add self in place");
     }
@@ -205,13 +204,9 @@ RankZeroOperator &RankZeroOperator::operator-=(const RankZeroOperator &O) {
  * applied with the given precision. Must be called prior to application.
  */
 void RankZeroOperator::setup(double prec) {
-    // std::cout << "RankZeroOperator::setup -- Setting up operator " << this->name() << " with precision " << prec << std::endl;
     for (auto &i : this->oper_exp) {
-        // std::cout << "RankZeroOperator::setup -- operator expansion" << std::endl;
         for (int j = 0; j < i.size(); j++) { 
-            // std::cout << "RankZeroOperator::setup -- operator: "<< j << " " << i[j] << std::endl;
             i.at(j)->setup(prec); //calls QMOperator::setup
-            // std::cout << "RankZeroOperator::setup -- operator setup done tut" << std::endl;
         }
     }
 }
@@ -360,13 +355,9 @@ OrbitalVector RankZeroOperator::dagger(OrbitalVector &inp) {
  * the corresponding coefficient to yield the final result.
  */
 ComplexDouble RankZeroOperator::operator()(Orbital bra, Orbital ket) {
-    // MSG_INFO("aa");
     RankZeroOperator &O = *this;
-    // MSG_INFO("bb");
     Orbital Oket = O(ket);
-    // MSG_INFO("cc");
     ComplexDouble out = mrcpp::dot(bra, Oket);
-    // MSG_INFO("dd");
     return out;
 }
 
