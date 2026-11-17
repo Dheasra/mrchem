@@ -66,7 +66,7 @@ namespace mrchem {
  * Projects only the occupied orbitals of each spin.
  *
  */
-bool initial_guess::gto::setup(OrbitalVector &Phi, double prec, double screen, const std::string &bas_file, const std::string &mop_file, const std::string &moa_file, const std::string &mob_file) {
+bool initial_guess::gto::setup(OrbitalVector &Phi, double prec, double screen, const std::string &bas_file, const std::string &mop_file, const std::string &moa_file, const std::string &mob_file, int n_components) {
     if (Phi.size() == 0) return false;
 
     mrcpp::print::separator(0, '~');
@@ -177,6 +177,84 @@ void initial_guess::gto::project_mo(OrbitalVector &Phi, double prec, const std::
     mrcpp::print::time(1, "Projecting GTO MOs", t3);
     mrcpp::print::footer(1, t_tot, 2);
 }
+
+// /** @brief Project the N first GTO expansions of the MO basis
+//  *
+//  * @param Phi: vector of MW spinors
+//  * @param prec Precision used in projection
+//  * @param bas_file String containing basis set file
+//  * @param mo_file String containing MO matrix file (must be spinors)
+//  * @param screen GTO screening in StdDev
+//  *
+//  * Projects the N first rows of the MO matrix from GTO orbitals into
+//  * corresponding MW orbitals.
+//  *
+//  */
+// void initial_guess::gto::project_ao_cplx(OrbitalVector &Phi, double prec, const std::string &bas_file, const std::string &mo_file, double screen) {
+//     if (Phi.size() == 0) return;
+
+//     Timer t_tot;
+//     auto pprec = Printer::getPrecision();
+//     auto w0 = Printer::getWidth() - 2;
+//     auto w1 = 5;
+//     auto w2 = w0 * 2 / 9;
+//     auto w3 = w0 - w1 - 3 * w2;
+
+//     std::stringstream o_head;
+//     o_head << std::setw(w1) << "n";
+//     o_head << std::setw(w3) << "Norm";
+//     o_head << std::setw(w2 + 1) << "Nodes";
+//     o_head << std::setw(w2) << "Size";
+//     o_head << std::setw(w2) << "Time";
+
+//     mrcpp::print::header(1, "GTO Initial Guess");
+//     println(2, o_head.str());
+//     mrcpp::print::separator(2, '-');
+
+//     // Setup AO basis
+//     Timer t1;
+//     gto_utils::Intgrl intgrl(bas_file);
+//     gto_utils::OrbitalExp gto_exp(intgrl, false); // the .bas file must be Cartesian, not a standard spherical LSDalton set. For atomic small component, the script MRCHEM/tools/h5_to_bas.py writes carthesian bas files from DIRAC h5 binaries.
+//     t1.stop();
+
+//     // Read MO file (transpose)
+//     Timer t2;
+//     ComplexMatrix MO = math_utils::read_matrix_file_cplx(mo_file);
+//     if (MO.cols() < Phi.size()) MSG_ABORT("Size mismatch");
+//     t2.stop();
+
+//     Timer t3;
+//     for (int i = 0; i < Phi.size(); i++) {
+//         Timer t_i;
+//         bool grid_was_built = false;
+//         if (mrcpp::mpi::my_func(Phi[i])) {
+//             GaussExp<3> mo_i = gto_exp.getMO(i, MO.transpose());
+//             mo_i.calcScreening(screen);
+//             mrcpp::project(prec, Phi[i].real(), mo_i);
+//             if (std::abs(Phi[i].norm() - 1.0) > 1e2 * prec) {
+//                 GaussExp<3> mo_i_grid = gto_exp.getMO(i, MO.transpose(), prec * 1e-1);
+//                 GaussExp<3> mo_i_screened = gto_exp.getMO(i, MO.transpose(), prec * 1e-2);
+//                 grid_was_built = true;
+//                 mrcpp::build_grid(Phi[i].real(), mo_i_grid);
+//                 mrcpp::project(prec, Phi[i].real(), mo_i_screened);
+//                 Phi[i].real().crop(prec * 1e-1, false);
+//             }
+//         }
+//         std::stringstream o_txt;
+//         o_txt << std::setw(w1 - 1) << i;
+//         o_txt << std::setw(w3) << print_utils::dbl_to_str(Phi[i].norm(), pprec, true);
+//         if (grid_was_built) {
+//             o_txt << '*';
+//         }
+//         print_utils::qmfunction(2, o_txt.str(), Phi[i], t_i);
+//     }
+//     mrcpp::mpi::barrier(mrcpp::mpi::comm_wrk);
+//     mrcpp::print::separator(2, '-');
+//     mrcpp::print::time(1, "Reading AO basis", t1);
+//     mrcpp::print::time(1, "Reading MO matrix", t2);
+//     mrcpp::print::time(1, "Projecting GTO MOs", t3);
+//     mrcpp::print::footer(1, t_tot, 2);
+// }
 
 /** @brief Project the N first GTO expansions of the AO basis
  *

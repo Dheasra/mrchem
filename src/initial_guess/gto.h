@@ -52,12 +52,18 @@ bool setup(OrbitalVector &Phi,
            const std::string &bas_file,
            const std::string &mop_file,
            const std::string &moa_file,
-           const std::string &mob_file);
+           const std::string &mob_file,
+           int n_components = 1);
 void project_mo(OrbitalVector &Phi,
                 double prec,
                 const std::string &bas_file,
                 const std::string &mo_file,
                 double screen = -1.0);
+// void project_ao_cplx(OrbitalVector &Phi,
+//                      double prec,
+//                      const std::string &bas_file,
+//                      const std::string &mo_file,
+//                      double screen = -1.0);
 void project_ao(OrbitalVector &Phi,
                 double prec,
                 const Nuclei &nucs,

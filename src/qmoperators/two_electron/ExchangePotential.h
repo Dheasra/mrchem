@@ -29,9 +29,11 @@
 #include <MRCPP/Parallel>
 
 #include "qmoperators/QMOperator.h"
+#include "qmoperators/one_electron/ASCOperator.h"
 
 #include "qmfunctions/Orbital.h"
 #include "qmfunctions/qmfunction_fwd.h"
+
 
 namespace mrchem {
 
@@ -79,7 +81,7 @@ protected:
     virtual void setupInternal(double prec) {}
     void clearInternal() { this->exchange.clear(); }
 
-    void calcExchange_kij(double prec, Orbital phi_k, Orbital phi_i, Orbital phi_j, Orbital &out_kij, Orbital *out_jji = nullptr);
+    void calcExchange_kij(double prec, Orbital phi_k, Orbital phi_i, Orbital phi_j, Orbital &out_kij, Orbital *out_jji = nullptr, ASCOperator *asc = nullptr);
 };
 
 } // namespace mrchem

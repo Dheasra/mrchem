@@ -160,7 +160,7 @@ void ExchangePotential::clear() {
  * then applies the Poisson operator, and multiplies the result
  * by phi_k (and optionally by phi_j). The result is given in phi_out.
  */
-void ExchangePotential::calcExchange_kij(double prec, Orbital phi_k, Orbital phi_i, Orbital phi_j, Orbital &out_kij, Orbital *out_jji) {
+void ExchangePotential::calcExchange_kij(double prec, Orbital phi_k, Orbital phi_i, Orbital phi_j, Orbital &out_kij, Orbital *out_jji, ASCOperator *asc) {
     Timer timer_tot;
     mrcpp::PoissonOperator &P = *this->poisson;
 
@@ -177,6 +177,11 @@ void ExchangePotential::calcExchange_kij(double prec, Orbital phi_k, Orbital phi
     // mrcpp::multiply(rho_ij, phi_i, phi_j, prec_m1, true, true, true);
     //multi component behaviour: all componenets should be summed, basically making a "density"
     mrcpp::make_density(rho_ij, phi_i, phi_j, prec_m1);
+    
+    // Small component contribution in the "X2C" method
+    // if (asc != nullptr) {
+    //     Orbital xphi_i = (*asc)()
+    // }
     timer_ij.stop();
 
     //resetting out_kij to a default real definition rather than the complex it might have inherited from phi 

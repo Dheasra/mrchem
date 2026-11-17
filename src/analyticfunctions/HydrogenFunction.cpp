@@ -25,6 +25,8 @@
 
 #include "MRCPP/Printer"
 
+#include <vector>
+
 #include "HydrogenFunction.h"
 #include "chemistry/PhysicalConstants.h"
 #include "mrchem.h"
@@ -148,6 +150,96 @@ double RadialFunction::evalfPoly_hardcoded(double r) const {
     return value;
 }
 // clang-format on
+// clang-format off
+// General (arbitrary L) real solid harmonics, used only as a fallback for L > 3
+// where AngularFunction::calcConstant/evalfPoly have no hardcoded table entry.
+// The L <= 3 hardcoded branches below are left untouched and take priority.
+namespace {
+
+// A single term c * x^a * y^b * z^c of a homogeneous polynomial in (x,y,z).
+struct Monomial {
+    double coeff;
+    int a, b, c;
+};
+
+// Exact angular integral of a monomial x^a y^b z^c over the full solid angle
+// (zero unless a, b, c are all even, by symmetry). Standard closed-form
+// Gaussian/spherical moment identity.
+double sphereMomentXYZ(int a, int b, int c) {
+    if (a % 2 != 0 or b % 2 != 0 or c % 2 != 0) return 0.0;
+    double num = math_utils::double_factorial(a - 1) * math_utils::double_factorial(b - 1) * math_utils::double_factorial(c - 1);
+    double den = math_utils::double_factorial(a + b + c + 1);
+    return 4.0 * mrcpp::pi * num / den;
+}
+
+// Unnormalized real solid harmonic r^L * Y_{L,m}^{cos/sin}(theta,phi), expanded
+// as a sum of Cartesian monomials, for 0 <= m <= L.
+//
+// Construction (standard, two closed-form finite sums):
+//   R_{L,m} = [explicit Rodrigues-type polynomial in (z, r^2), degree L-m]
+//           x [Re or Im part of (x+iy)^m, degree m]
+// cosType = true picks the cos(m*phi)-type (Re) combination, false picks sin(m*phi)-type (Im).
+std::vector<Monomial> realSolidHarmonicMonomials(int L, int m, bool cosType) {
+    // z/r^2 part: sum_k (-1)^k (2L-2k)! / (2^L k! (L-k)! (L-m-2k)!) * r^{2k} * z^{L-m-2k}
+    std::vector<Monomial> zPart;
+    int kmax = (L - m) / 2;
+    for (int k = 0; k <= kmax; k++) {
+        double coeff = std::pow(-1.0, k) * math_utils::factorial(2 * L - 2 * k) /
+                       (std::pow(2.0, L) * math_utils::factorial(k) * math_utils::factorial(L - k) * math_utils::factorial(L - m - 2 * k));
+        // r^{2k} = (x^2 + y^2 + z^2)^k, expanded via the trinomial theorem
+        for (int i = 0; i <= k; i++) {
+            for (int j = 0; j <= k - i; j++) {
+                int p = k - i - j;
+                double trinom = math_utils::factorial(k) / (math_utils::factorial(i) * math_utils::factorial(j) * math_utils::factorial(p));
+                zPart.push_back({coeff * trinom, 2 * i, 2 * j, 2 * p + (L - m - 2 * k)});
+            }
+        }
+    }
+
+    // (x + iy)^m part, real or imaginary component via binomial expansion
+    std::vector<Monomial> xyPart;
+    for (int j = 0; j <= m; j++) {
+        bool isImagTerm = (j % 2 == 1);
+        if (isImagTerm == cosType) continue; // keep Re[] for cosType, Im[] otherwise
+        double sign = std::pow(-1.0, j / 2); // i^j = +-1 on the kept (even or odd) terms
+        double binom = static_cast<double>(math_utils::binomial(m, j));
+        xyPart.push_back({sign * binom, m - j, j, 0});
+    }
+
+    std::vector<Monomial> out;
+    out.reserve(zPart.size() * xyPart.size());
+    for (const auto &zm : zPart) {
+        for (const auto &xym : xyPart) { out.push_back({zm.coeff * xym.coeff, zm.a + xym.a, zm.b + xym.b, zm.c + xym.c}); }
+    }
+    return out;
+}
+
+// Exact normalization constant for a monomial expansion: 1/sqrt(integral of poly^2 over solid angle).
+// Self-consistent by construction regardless of the overall scale realSolidHarmonicMonomials() happens to produce.
+double normalizeMonomials(const std::vector<Monomial> &poly) {
+    double norm2 = 0.0;
+    for (const auto &m1 : poly) {
+        for (const auto &m2 : poly) { norm2 += m1.coeff * m2.coeff * sphereMomentXYZ(m1.a + m2.a, m1.b + m2.b, m1.c + m2.c); }
+    }
+    return 1.0 / std::sqrt(norm2);
+}
+
+// Maps the custom M index (0..2L) used by AngularFunction to a canonical (m, cosType)
+// pair, for the general L > 3 case only. The L <= 3 hardcoded table does not follow a
+// single consistent M-ordering rule across L, so this defines a fresh, self-consistent
+// one for the new cases instead of trying to extrapolate the legacy ordering:
+//   M=0 -> m=0 ; for k=1..L: M=2k-1 -> (m=k, cos), M=2k -> (m=k, sin)
+void mapMtoCanonical(int M, int &m, bool &cosType) {
+    if (M == 0) {
+        m = 0;
+        cosType = true;
+        return;
+    }
+    m = (M + 1) / 2;
+    cosType = (M % 2 == 1);
+}
+
+} // namespace
 
 AngularFunction::AngularFunction(int l, int m)
         : L(l)
@@ -179,7 +271,13 @@ double AngularFunction::calcConstant() const {
     } else if (L == 3 and M == 4) { c = std::sqrt(105.0/4.0);
     } else if (L == 3 and M == 5) { c = std::sqrt(105.0/4.0);
     } else if (L == 3 and M == 6) { c = std::sqrt(105.0/4.0);
-    } else { NOT_IMPLEMENTED_ABORT; }
+    } else { 
+        // General L > 3: normalize the same monomial expansion evalfPoly() evaluates below,
+        // then rescale by 2*sqrt_pi so the shared "return c/(2*sqrt_pi)" below cancels out.
+        int m; bool cosType;
+        mapMtoCanonical(M, m, cosType);
+        c = normalizeMonomials(realSolidHarmonicMonomials(L, m, cosType)) * 2.0 * sqrt_pi;
+    }
     return c/(2.0*sqrt_pi);
 }
 // clang-format on
@@ -207,7 +305,16 @@ double AngularFunction::evalfPoly(const mrcpp::Coord<3> &q) const {
     } else if (L == 3 and M == 4) { value = y*(z*z - x*x)/(r*r*r);
     } else if (L == 3 and M == 5) { value = z*(x*x - y*y)/(r*r*r);
     } else if (L == 3 and M == 6) { value = 2.0*x*y*z/(r*r*r);
-    } else { NOT_IMPLEMENTED_ABORT; }
+    } else { 
+        // General L > 3: same (L,M) -> (m,cosType) mapping and monomial expansion as calcConstant().
+        int m; bool cosType;
+        mapMtoCanonical(M, m, cosType);
+        double poly = 0.0;
+        for (const auto &mono : realSolidHarmonicMonomials(L, m, cosType)) {
+            poly += mono.coeff * std::pow(x, mono.a) * std::pow(y, mono.b) * std::pow(z, mono.c);
+        }
+        value = poly / std::pow(r, L);
+     }
     return value;
 }
 // clang-format on

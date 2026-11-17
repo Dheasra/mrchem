@@ -538,7 +538,7 @@ bool driver::scf::guess_orbitals(const json &json_guess, const json &json_occ, M
         type = "nao";
     }
 
-    if (n_components > 1 && not((type == "sad") ||  (type == "sad_gto") || (type == "mw") || (type == "nao")|| (type == "core"))) {
+    if (n_components > 1 && not((type == "sad") ||  (type == "sad_gto") || (type == "mw") || (type == "nao")|| (type == "core")|| (type=="gto"))) {
         MSG_ERROR("Initial guess type "<< type << " not implemented for spinors");
         return false;
     }
@@ -554,7 +554,7 @@ bool driver::scf::guess_orbitals(const json &json_guess, const json &json_occ, M
     } else if (type == "sad_gto") {
         success = initial_guess::sad::setupGTO(Phi, prec, screen, nucs, n_components);
     } else if (type == "gto") {
-        success = initial_guess::gto::setup(Phi, prec, screen, gto_bas, gto_p, gto_a, gto_b);
+        success = initial_guess::gto::setup(Phi, prec, screen, gto_bas, gto_p, gto_a, gto_b, n_components);
     } else if (type == "cube") {
         success = initial_guess::cube::setup(Phi, prec, cube_p, cube_a, cube_b);
     } else if (type == "nao") {

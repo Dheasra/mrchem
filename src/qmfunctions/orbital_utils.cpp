@@ -684,7 +684,7 @@ ComplexMatrix orbital::orthonormalize_ASC(double prec, OrbitalVector &Phi_L, Com
     t_lap.start();
     mrcpp::rotate(Phi_L, U, prec);   // rotate the large components only
 
-
+    Psi_S = X(Phi_L);  
     ComplexMatrix Stut = orbital::calc_overlap_matrix(Phi_L, Phi_L)
                     + orbital::calc_overlap_matrix(Psi_S, Psi_S); // S_LL + X^dagger X contribution
     MSG_INFO("ASC Post ortho S="<< Stut << " Large overlap="<< orbital::calc_overlap_matrix(Phi_L, Phi_L));

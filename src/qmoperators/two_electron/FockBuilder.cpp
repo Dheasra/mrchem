@@ -279,6 +279,12 @@ SCFEnergy FockBuilder::trace(OrbitalVector &Phi, const Nuclei &nucs) {
         E_mc2 += (-c)*c*S_S_trace; //small component mass contribution
         E_mc2 -= c*c*orbital::get_electron_number(Phi);; //shifting the gauge down
 
+        // debug 
+        ComplexDouble Enuc_large = this->nuc->trace(Phi);
+        ComplexDouble Enuc_small = this->nuc->trace(Xphi);
+        MSG_INFO("Scheming Enuc large="<< Enuc_large << ", small="<< Enuc_small << ", small overlap trace="<< S_S_trace); 
+        // end debug
+
         if (this->nuc != nullptr) { E_en += this->nuc->trace(Xphi).real(); }
         if (this->coul != nullptr) E_ee += 0.5 * this->coul->trace(Xphi).real();
         if (this->ex != nullptr) E_x += -this->exact_exchange * this->ex->trace(Xphi).real();
@@ -667,10 +673,12 @@ OrbitalVector FockBuilder::buildHelmholtzArgumentX2C(OrbitalVector &Phi, Orbital
     }
     
     OrbitalVector termOne = V(Phi);//compute first term EV|ψ>
+    MSG_INFO("atattaatattatatattatatatattatatattaatatatata");
     for (int i = 0; i < Phi.size(); i++) {
         if (!mrcpp::mpi::my_func(i)) continue;
-        for (int comp=0; comp<Ncomponents; comp++) 
+        for (int comp=0; comp<Ncomponents; comp++)
         termOne[i].func_ptr->data.c1[comp] *= (0.5 + eps[i]/(two_cc)); //0.5 because the HelmholtzOperator applies -2*G, and the Dirac propagator trick creates only -G
+        // termOne[i].func_ptr->data.c1[comp] *= (1.0); //test debug energy gauge 0.5 because the HelmholtzOperator applies -2*G, and the Dirac propagator trick creates only -G
     }
     // MSG_INFO("termOne norm="<< termOne[0].norm());
     // MSG_INFO("termTwo norm="<< termTwo[0].norm());
